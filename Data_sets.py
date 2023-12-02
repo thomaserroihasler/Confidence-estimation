@@ -32,34 +32,6 @@ class CustomImageDataset(Dataset):
             image = self.transform(image)
         label = self.labels[idx]
         return image, label
-#
-#
-# class CustomImageDataset(Dataset):
-#     def __init__(self, img_dir, labels_path):
-#         self.img_dir = img_dir
-#         self.images = []
-#         self.labels = []
-#
-#         # Load the labels and images
-#         with open(labels_path, 'r') as f:
-#             lines = f.readlines()
-#             for line in lines:
-#                 img_file, label = line.strip().split(' ')
-#                 self.images.append(os.path.join(img_dir, img_file))
-#                 self.labels.append(int(label))
-#
-#     def __len__(self):
-#         return len(self.labels)
-#
-#     def __getitem__(self, idx):
-#         img_path = self.images[idx]
-#         image = Image.open(img_path).convert("RGB")
-#         #print('image number ', idx+1)
-#         label = self.labels[idx]
-#         #print('image label ', label)
-#         return image, label
-
-### Synthetic confidences
 
 # takes in a distribution, number of classes, and a number of data points
 class Synthetic_confidence_dataset(Dataset):
