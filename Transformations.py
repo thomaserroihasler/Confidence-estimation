@@ -1,6 +1,4 @@
 import math as mt
-import numpy as np
-import math as mt
 import functools
 import torch as tr
 import torch.nn as nn
@@ -506,6 +504,18 @@ class ImageDiffeomorphism(Diffeomorphism):
         self.Fourier_Coefficents = Fourier_Coefficents
     def deform(self, x):
         return deform(x, self.Fourier_Coefficents[0],self.Fourier_Coefficents[1],x.device)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #

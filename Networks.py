@@ -1,17 +1,189 @@
 import math as mt
 import torch as tr
-import copy as cp
 import torch.nn.functional as F
 import warnings
 import torch.nn as nn
 
-##### DEFINITIONS #####
+class SquareDiagonalLinear(nn.Module):
+    """
+    SquareDiagonalLinear: A linear layer with a diagonal weight matrix, implemented using matrix multiplication.
+    """
+    def __init__(self, in_features):
+        super(SquareDiagonalLinear, self).__init__()
+        self.in_features = in_features
+        self.weight = nn.Parameter((tr.randn(1)),requires_grad=True)
+        self.bias = nn.Parameter(tr.zeros(in_features))
+    def forward(self, input):
+        # Compute the diagonal matrix from the weight vector
+        # Compute the output using the diagonal weight and bias
+        output = tr.matmul(input,tr.eye(self.in_features)*self.weight)
+        output += self.bias
+        return output
 
-#### Analytical models ####
+class SquareHeavysideLinear(nn.Module):
+    """
+    SquareHeavysideLinear: A linear layer with a Heaviside step function activation.
+    """
+    def __init__(self, in_features):
+        super(SquareHeavysideLinear, self).__init__()
+        self.in_features = in_features
+        self.bias = nn.Parameter(tr.zeros(in_features))
 
-# Diagonal Linear model
+    def forward(self, input):
+        output = tr.heaviside(input - 0.5,tr.zeros_like(input))
+        return output
+
+class RectangularOneLinear(nn.Module):
+    """
+    RectangularOneLinear: A linear layer with custom weight initialization and matrix operations.
+    """
+    def __init__(self, in_features,out_features):
+        super(RectangularOneLinear, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        temp = 2*(tr.rand(in_features,out_features))
+        temp[:,0] = -1*temp[:,0]
+        self.weight = nn.Parameter(temp,requires_grad=True)
+        self.bias = nn.Parameter(tr.randn(self.out_features))
+
+    def forward(self, input):
+        output = tr.matmul(input,tr.ones(self.in_features,self.out_features)*self.weight)
+        output += self.bias
+        return output
+
+class RoundAndCount(nn.Module):
+    """
+    RoundAndCount: A module that rounds the input tensor and counts the number of zeros and ones.
+    """
+    def __init__(self):
+        super(RoundAndCount, self).__init__()
+
+    def forward(self, t):
+        rounded = t.round()
+        num_zeros = tr.count_nonzero(rounded == 0, dim=-1)
+        num_ones = tr.count_nonzero(rounded == 1, dim=-1)
+        return (num_zeros < num_ones).long()
+
+#### Neural network approximations ####
+
+### Convention that for classification the final layer is without the sofmax and the maximum
+
+# Simpler approximating network
+
+class GradientSelectiveSigmoidRoundAndCount(nn.Module):
+    """
+    GradientSelectiveSigmoidRoundAndCount: A neural network model that applies sigmoid activation selectively.
+    """
+    def __init__(self, height_and_width):
+        super(GradientSelectiveSigmoidRoundAndCount, self).__init__()
+        self.height_and_width = height_and_width
+        # Initialize the first layer as SquareDiagonalLinear
+        self.layer1 = SquareDiagonalLinear(height_and_width ** 2)
+        # Set bias for the first layer
+        self.layer1.bias = nn.Parameter(tr.ones(height_and_width**2) * (-1)*0.5, requires_grad=False)
+        # Define the second linear layer
+        self.layer2 = nn.Linear(height_and_width * height_and_width, 2, bias=True)
+
+    def forward(self, x):
+        # Forward pass through the network with sigmoid activation
+        x = self.layer1(x)
+        x = nn.functional.sigmoid(x)
+        x = self.layer2(x)
+        return x
+
+class Identity(nn.Module):
+    """
+    Identity: A simple identity module that returns its input unchanged.
+    """
+    def __init__(self):
+        super(Identity, self).__init__()
+
+    def forward(self, x):
+        # Returns the input as output
+        return x
+
+class SigmoidRoundAndCount(nn.Module):
+    """
+    SigmoidRoundAndCount: A neural network using sigmoid activations.
+    """
+    def __init__(self, Height_and_width):
+        super(SigmoidRoundAndCount, self).__init__()
+        self.Height_and_width = Height_and_width
+        # Initialize two fully connected layers
+        self.fc1 = nn.Linear(Height_and_width*Height_and_width, Height_and_width*Height_and_width)
+        self.fc2 = nn.Linear(Height_and_width*Height_and_width, 2)
+
+    def forward(self, x):
+        # Flatten the input and apply sigmoid activation
+        x = x.view(-1, self.Height_and_width*self.Height_and_width)
+        x = tr.sigmoid(self.fc1(x))
+        x = tr.sigmoid(self.fc2(x))
+        return x
+
+
+class FullyConnectedNet(nn.Module):
+    """
+    FullyConnectedNet: A fully connected neural network with customizable layers.
+    """
+    def __init__(self, input_size, hidden_sizes, output_size):
+        super(FullyConnectedNet, self).__init__()
+        # Create a sequence of layers
+        self.layers = nn.ModuleList()
+        # Add layers to the network
+        self.layers.append(nn.Linear(input_size, hidden_sizes[0]))
+        for i in range(1, len(hidden_sizes)):
+            self.layers.append(nn.Linear(hidden_sizes[i-1], hidden_sizes[i]))
+        self.layers.append(nn.Linear(hidden_sizes[-1], output_size))
+
+    def forward(self, x):
+        # Forward pass through each layer with ReLU activation
+        for layer in self.layers[:-1]:
+            x = nn.functional.relu(layer(x))
+        x = self.layers[-1](x)
+        return x
+
+
+class Simple_linear_sigmoid(nn.Module):
+    """
+    Simple_linear_sigmoid: A linear model with a sigmoid activation function.
+    """
+    def __init__(self, input_size, output_size):
+        super(Simple_linear_sigmoid, self).__init__()
+        # Initialize a linear layer followed by sigmoid activation
+        self.linear = nn.Linear(input_size, output_size)
+        self.Sigmoid = nn.Sigmoid()
+
+    def forward(self, inputs):
+        # Apply linear transformation followed by sigmoid
+        x = self.linear(inputs)
+        x = self.Sigmoid(x)
+        return x
+
+
+class BatchedNet(nn.Module):
+    """
+    BatchedNet: A neural network with one hidden layer using ReLU activation.
+    """
+    def __init__(self, input_size, hidden_size, output_size):
+        super(BatchedNet, self).__init__()
+        # Initialize layers
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_size, output_size)
+
+    def forward(self, inputs):
+        # Forward pass with ReLU activation
+        x = self.fc1(inputs)
+        x = self.relu(x)
+        x = self.fc2(x)
+        return x
+
 
 class SimpleCNN(nn.Module):
+    """
+    SimpleCNN: A convolutional neural network with a sequence of convolutional, ReLU, BatchNorm, and MaxPool layers,
+    followed by fully connected layers. It's designed for image classification tasks.
+    """
     def __init__(self, input_size = (3,128,128), num_classes=7):
         super(SimpleCNN, self).__init__()
 
@@ -58,163 +230,6 @@ class SimpleCNN(nn.Module):
         x = self.fc_layer(x)
         return x
 
-
-class SquareDiagonalLinear(nn.Module):
-    def __init__(self, in_features):
-        super(SquareDiagonalLinear, self).__init__()
-        self.in_features = in_features
-        self.weight = nn.Parameter((tr.randn(1)),requires_grad=True)
-        self.bias = nn.Parameter(tr.zeros(in_features))
-    def forward(self, input):
-        # Compute the diagonal matrix from the weight vector
-        # Compute the output using the diagonal weight and bias
-        output = tr.matmul(input,tr.eye(self.in_features)*self.weight)
-        output += self.bias
-        return output
-
-class SquareHeavysideLinear(nn.Module):
-    def __init__(self, in_features):
-        super(SquareHeavysideLinear, self).__init__()
-        self.in_features = in_features
-        self.bias = nn.Parameter(tr.zeros(in_features))
-
-    def forward(self, input):
-        output = tr.heaviside(input - 0.5,tr.zeros_like(input))
-        return output
-
-class RectangularOneLinear(nn.Module):
-
-    def __init__(self, in_features,out_features):
-        super(RectangularOneLinear, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        temp = 2*(tr.rand(in_features,out_features))
-        temp[:,0] = -1*temp[:,0]
-        self.weight = nn.Parameter(temp,requires_grad=True)
-        self.bias = nn.Parameter(tr.randn(self.out_features))
-
-    def forward(self, input):
-        output = tr.matmul(input,tr.ones(self.in_features,self.out_features)*self.weight)
-        output += self.bias
-        return output
-
-class RoundAndCount(nn.Module):
-    def __init__(self):
-        super(RoundAndCount, self).__init__()
-
-    def forward(self, t):
-        rounded = t.round()
-        num_zeros = tr.count_nonzero(rounded == 0, dim=-1)
-        num_ones = tr.count_nonzero(rounded == 1, dim=-1)
-        return (num_zeros < num_ones).long()
-
-#### Neural network approximations ####
-
-### Convention that for classification the final layer is without the sofmax and the maximum
-
-# Simpler approximating network
-
-class GradientSelectiveSigmoidRoundAndCount(nn.Module):
-    def __init__(self, height_and_width):
-        super(GradientSelectiveSigmoidRoundAndCount, self).__init__()
-        self.height_and_width = height_and_width
-        #self.layer1 = SquareHeavysideLinear(height_and_width ** 2)
-        self.layer1 = SquareDiagonalLinear(height_and_width ** 2)
-        self.layer1.bias = nn.Parameter(tr.ones(height_and_width**2) * (-1)*0.5, requires_grad=False)
-
-        self.layer2 = nn.Linear(height_and_width * height_and_width, 2, bias=True)
-
-    def forward(self, x):
-        x = self.layer1(x)
-        x = nn.functional.sigmoid(x)
-        x = self.layer2(x)
-        return x
-
-class Identity(nn.Module):
-    def __init__(self):
-        super(Identity, self).__init__()
-
-    def forward(self, x):
-        return x
-
-# Approximate network:
-class SigmoidRoundAndCount(nn.Module):
-    def __init__(self, Height_and_width):
-        super(SigmoidRoundAndCount, self).__init__()
-        self.Height_and_width = Height_and_width
-        self.fc1 = nn.Linear(Height_and_width*Height_and_width, Height_and_width*Height_and_width)
-        self.fc2 = nn.Linear(Height_and_width*Height_and_width, 2)
-
-    def forward(self, x):
-        x = x.view(-1, self.Height_and_width*self.Height_and_width)
-        x = tr.sigmoid(self.fc1(x))
-        x = tr.sigmoid(self.fc2(x))
-        return x
-
-# Fully connected
-class FullyConnectedNet(nn.Module):
-    def __init__(self, input_size, hidden_sizes, output_size):
-        super(FullyConnectedNet, self).__init__()
-        self.layers = nn.ModuleList()
-        self.layers.append(nn.Linear(input_size, hidden_sizes[0]))
-        for i in range(1, len(hidden_sizes)):
-            self.layers.append(nn.Linear(hidden_sizes[i-1], hidden_sizes[i]))
-        self.layers.append(nn.Linear(hidden_sizes[-1], output_size))
-
-    def forward(self, x):
-        for layer in self.layers[:-1]:
-            print('x before is ',x)
-            print('the layer is now',layer)
-            x = nn.functional.relu(layer(x))
-            print('x after is ',x)
-        x = self.layers[-1](x)
-        return x
-
-# Simple Linear models
-
-# no hidden layer with sigmoid activation
-
-class Simple_linear_sigmoid(nn.Module):
-    def __init__(self, input_size, output_size):
-        super(Simple_linear_sigmoid, self).__init__()
-        self.linear = nn.Linear(input_size, output_size)
-        self.Sigmoid = nn.Sigmoid()
-
-    def forward(self, inputs):
-        x = self.linear(inputs)
-        x = self.Sigmoid(x)
-        return x
-
-# 1 hidden layer with ReLu
-
-class BatchedNet(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super(BatchedNet, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_size, output_size)
-
-    def forward(self, inputs):
-        x = self.fc1(inputs)
-        x = self.relu(x)
-        x = self.fc2(x)
-        return x
-
-#
-
-class BatchedNet(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super(BatchedNet, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_size, output_size)
-
-    def forward(self, inputs):
-        x = self.fc1(inputs)
-        x = self.relu(x)
-        x = self.fc2(x)
-        return x
-
 # VGG & all necessary blocks
 
 warnings.filterwarnings(
@@ -229,6 +244,9 @@ cfg = {
 }
 
 class VGG(nn.Module):
+    """
+    VGG: Implementation of the VGG neural network architecture.
+    """
     def __init__(self, vgg_name, num_ch=3, num_classes=10, input_shape=(3, 32, 32), bias=True, batch_norm=True,
                  pooling="max", pooling_size=2, param_list=False, width_factor=1, stride=2):
         super(VGG, self).__init__()
@@ -343,6 +361,9 @@ class Conv2dList(nn.Module):
 
 
 class SubSampling(nn.Module):
+    """
+    SubSampling: A custom subsampling layer for downscaling feature maps.
+    """
     def __init__(self, kernel_size, stride=None):
         super(SubSampling, self).__init__()
         self.kernel_size = kernel_size
@@ -355,8 +376,10 @@ class SubSampling(nn.Module):
 
 
 class BasicBlock(nn.Module):
+    """
+    BasicBlock: A basic building block for ResNet architectures.
+    """
     expansion = 1
-
     def __init__(self, in_planes, planes, stride=1):
         super(BasicBlock, self).__init__()
         self.conv1 = nn.Conv2d(
@@ -383,6 +406,9 @@ class BasicBlock(nn.Module):
 
 
 class Bottleneck(nn.Module):
+    """
+    Bottleneck: An advanced building block for ResNet architectures with bottleneck design.
+    """
     expansion = 4
 
     def __init__(self, in_planes, planes, stride=1):
@@ -414,11 +440,10 @@ class Bottleneck(nn.Module):
 
 # ResNet & all necessary blocks
 
-import torch.nn.functional as F
-import torch.nn as nn
-import torch
-
 class ResNet(nn.Module):
+    """
+    ResNet: A class implementing the ResNet architecture.
+    """
     def __init__(self, block, num_blocks, num_classes=10, num_ch=3, input_shape=(1, 3, 32, 32)):
         super(ResNet, self).__init__()
         self.in_planes = 64
@@ -462,6 +487,9 @@ class ResNet(nn.Module):
         out = self.linear(out)
         return out
 
+
+# Factory functions for creating specific ResNet architectures
+
 def ResNet18(num_ch=3, num_classes=10, input_shape=(1, 3, 32, 32)):
     return ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes, num_ch=num_ch, input_shape=input_shape)
 
@@ -476,68 +504,3 @@ def ResNet101(num_ch=3, num_classes=10, input_shape=(1, 3, 32, 32)):
 
 def ResNet152(num_ch=3, num_classes=10, input_shape=(1, 3, 32, 32)):
     return ResNet(Bottleneck, [3, 8, 36, 3], num_classes=num_classes, num_ch=num_ch, input_shape=input_shape)
-
-#### LOADING PROCEDURES ####
-
-# functions to detect if network was saved on CPU or GPU
-
-def device_saved_DICT(dictionary):
-
-    if next(iter(dictionary.keys())).startswith('module.'):
-        # If the first state dictionary has a 'module' key, it was saved on a GPU
-        return 'cuda'
-    else:
-        # If the first state dictionary does not have a 'module' key, it was saved on the CPU
-        return 'cpu'
-
-def device_saved_FILE(file_location):
-    # Load the state dictionaries from the file
-    state_dicts = tr.load(file_location)
-    # Check if the first state dictionary has a 'module' key
-    return device_saved_DICT(state_dicts[0])
-
-def to_device_state_dict(state_dict, device):
-    device_str = str(device)
-
-    if device_str != 'cpu' and not device_str.startswith('cuda'):
-        raise ValueError(f"Invalid device: {device}. Only 'cpu' and devices starting with 'cuda' are supported.")
-    if device_str == 'cuda' and not tr.cuda.is_available():
-        raise ValueError("CUDA is not available on this system.")
-    new_state_dict = {}
-    for key, value in state_dict.items():
-        if isinstance(value, tr.Tensor):
-            if device_str.startswith('cuda') and not key.startswith('module.'):
-                #print(key)
-                #key = 'module.' + key
-                key =key
-                #print(key)
-            elif device_str == 'cpu' and key.startswith('module.'):
-                key = key[7:]
-            new_state_dict[key] = value.to(device)
-        else:
-            new_state_dict[key] = value
-    return new_state_dict
-
-
-def load_networks(network, file_location):
-    # Load the state dictionaries from the file
-    state_dicts = tr.load(file_location)
-
-    # Check if it's a single state dictionary
-    if isinstance(state_dicts, dict):
-        state_dicts = [state_dicts]
-
-    network_device = network.parameters().__next__().device
-    # Create a list to store the loaded networks
-    loaded_networks = []
-    #print('in the load networks function',network_device)
-    # Loop over the state dictionaries
-    for state_dict in state_dicts:
-        # Create a new network of the same type as the input network
-        loaded_network = cp.deepcopy(network)
-        loaded_network.load_state_dict(to_device_state_dict(state_dict, network_device))
-
-        # Add the loaded network to the list of loaded networks
-        loaded_networks.append(loaded_network)
-
-    return loaded_networks
