@@ -2,19 +2,27 @@ import torch as tr
 from torch.utils.data import Dataset
 import numpy as np
 import math as mt
-
-import os  # Needed for joining paths
-from torch.utils.data import Dataset
-from PIL import Image
+import os  # Used for handling file paths
+from PIL import Image  # Used for image processing
 
 class CustomImageDataset(Dataset):
-    def __init__(self, img_dir, labels_path, transform=None):
-        self.img_dir = img_dir
-        self.images = []
-        self.labels = []
-        self.transform = transform
+    """A custom dataset for loading images with labels."""
 
-        # Load the labels and images
+    def __init__(self, img_dir, labels_path, transform=None):
+        """
+        Initializes the dataset.
+
+        Args:
+            img_dir (str): Directory containing images.
+            labels_path (str): Path to the file containing labels.
+            transform (callable, optional): Optional transform to be applied on a sample.
+        """
+        self.img_dir = img_dir  # Directory of images
+        self.images = []  # List to store image file paths
+        self.labels = []  # List to store labels
+        self.transform = transform  # Transformations to be applied to images
+
+        # Load labels and image paths
         with open(labels_path, 'r') as f:
             lines = f.readlines()
             for line in lines:
@@ -23,19 +31,41 @@ class CustomImageDataset(Dataset):
                 self.labels.append(int(label))
 
     def __len__(self):
+        """Returns the total number of samples in the dataset."""
         return len(self.labels)
 
     def __getitem__(self, idx):
+        """
+        Fetches the image and label at the specified index.
+
+        Args:
+            idx (int): Index of the item.
+
+        Returns:
+            tuple: (image, label) where image is the transformed image and label is the corresponding label.
+        """
         img_path = self.images[idx]
-        image = Image.open(img_path).convert("RGB")
+        image = Image.open(img_path).convert("RGB")  # Load image
         if self.transform:
-            image = self.transform(image)
+            image = self.transform(image)  # Apply transformation
         label = self.labels[idx]
         return image, label
 
-# takes in a distribution, number of classes, and a number of data points
-class Synthetic_confidence_dataset(Dataset):
+
+class SyntheticConfidenceDataset(Dataset):
+    """A dataset for generating synthetic data based on a confidence distribution."""
+
     def __init__(self, N_classes, confidence_distribution, accuracy_function, noise_function, N_data):
+        """
+        Initializes the dataset.
+
+        Args:
+            N_classes (int): Number of classes.
+            confidence_distribution (callable): Function to generate confidence values.
+            accuracy_function (callable): Function to calculate accuracy.
+            noise_function (callable): Function to add noise.
+            N_data (int): Number of data points.
+        """
         self.N_classes = N_classes
         self.confidence_distribution = confidence_distribution
         self.accuracy_function = accuracy_function
@@ -45,126 +75,132 @@ class Synthetic_confidence_dataset(Dataset):
         self.data = self._generate_data()
 
     def __getitem__(self, index):
+        """Returns the data at the specified index."""
         return self.data[index]
 
     def __len__(self):
+        """Returns the total number of samples in the dataset."""
         return len(self.data)
 
     def _generate_data(self):
+        """Generates synthetic data based on the defined functions."""
         data = []
 
         for _ in range(self.N_data):
-            # Sample a confidence value
-            c = self.confidence_distribution()
+            c = self.confidence_distribution()  # Sample confidence
+            prob_field = self._generate_prob_field(c)  # Generate probability field
+            y = self._generate_y(c, prob_field)  # Generate label
 
-            # Generate a probability field with the sampled confidence as max
-            prob_field = self._generate_prob_field(c)
-
-            # Generate y based on accuracy function and noise
-            y = self._generate_y(c, prob_field)
-
-            # Generate tensor x
-            x = tr.log(tr.tensor(prob_field, dtype=tr.float32))
-
+            x = tr.log(tr.tensor(prob_field, dtype=tr.float32))  # Log-transform probability field
             data.append((x, tr.tensor(y, dtype=tr.int32)))
 
         return data
 
     def _generate_prob_field(self, confidence):
+        """Generates a probability field for the classes."""
         i = np.random.randint(self.N_classes)
         rest = 1 - confidence
 
         prob_field = np.random.rand(self.N_classes - 1)
         prob_field /= prob_field.sum()
-        prob_field = prob_field * rest
-
-        # Insert the confidence value at the random index 'i'
+        prob_field *= rest
         prob_field = np.insert(prob_field, i, confidence)
 
-        # Return the probability field and the argmax of the field
         return prob_field
 
     def _generate_y(self, confidence, prob_field):
+        """Generates the label based on confidence and probability field."""
         true_prediction = np.argmax(prob_field)
-        if np.random.rand() < self.accuracy_function(confidence) + self.noise_function(confidence)*(2*np.random.rand()-1):
+        if np.random.rand() < self.accuracy_function(confidence) + self.noise_function(confidence) * (
+                2 * np.random.rand() - 1):
             return true_prediction
         else:
-            # Create a list of all classes
             classes = list(range(self.N_classes))
-            # Remove the true prediction
             classes.remove(true_prediction)
-            # Randomly select from the remaining classes
             return np.random.choice(classes)
 
+
 class BlackWhiteImageDataset(Dataset):
+    """A dataset for generating black and white images with equal number of pixels."""
+
     def __init__(self, N_pixels, N_data):
+        """
+        Initializes the dataset.
+
+        Args:
+            N_pixels (int): Total number of pixels in an image.
+            N_data (int): Number of images to generate.
+        """
         self.N_pixels = N_pixels
         self.N_data = N_data
-        self.image_size = int(mt.sqrt(N_pixels))
+        self.image_size = int(mt.sqrt(N_pixels))  # Calculate image size
 
     def __len__(self):
+        """Returns the total number of samples in the dataset."""
         return self.N_data
 
     def __getitem__(self, index):
-
+        """Returns the image and label at the specified index."""
         if isinstance(index, slice):
-            start, stop, step = index.indices(len(self))
-            return [self[i] for i in range(start, stop, step)]
-
-        image = np.random.rand(self.image_size, self.image_size)
-        rounded_image = np.round(image).astype(int)
-
-        while True:
-            black_pixels = np.count_nonzero(rounded_image == 0)
-            white_pixels = np.count_nonzero(rounded_image == 1)
-
-            if black_pixels == white_pixels:
-                # Resample the image
-                image = np.random.rand(self.image_size, self.image_size)
-                rounded_image = np.round(image).astype(int)
-            else:
-                label = 0 if black_pixels > white_pixels else 1
-                break
-
-        # Convert image and label to tensors
-        image_tensor = tr.tensor(image, dtype=tr.float32)
-        label_tensor = tr.tensor(label, dtype=tr.long)
-
-        return image_tensor, label_tensor
-
-class ProbabilisticBlackWhiteImageDataset(Dataset):
-    def __init__(self, N_pixels, N_data):
-        self.N_pixels = N_pixels
-        self.N_data = N_data
-        self.image_size = int(mt.sqrt(N_pixels))
-
-    def __len__(self):
-        return self.N_data
-
-    def __getitem__(self, index):
-
-        if isinstance(index, slice):
+            # Handle slicing
             start, stop, step = index.indices(len(self))
             return [self[i] for i in range(start, stop, step)]
 
         while True:
             image = np.random.rand(self.image_size, self.image_size)
             rounded_image = np.round(image).astype(int)
+            black_pixels = np.count_nonzero(rounded_image == 0)
+            white_pixels = np.count_nonzero(rounded_image == 1)
 
+            if black_pixels != white_pixels:
+                label = 0 if black_pixels > white_pixels else 1
+                break
+
+        image_tensor = tr.tensor(image, dtype=tr.float32)
+        label_tensor = tr.tensor(label, dtype=tr.long)
+
+        return image_tensor, label_tensor
+
+
+class ProbabilisticBlackWhiteImageDataset(Dataset):
+    """A dataset for generating black and white images with probabilistic labeling."""
+
+    def __init__(self, N_pixels, N_data):
+        """
+        Initializes the dataset.
+
+        Args:
+            N_pixels (int): Total number of pixels in an image.
+            N_data (int): Number of images to generate.
+        """
+        self.N_pixels = N_pixels
+        self.N_data = N_data
+        self.image_size = int(mt.sqrt(N_pixels))  # Calculate image size
+
+    def __len__(self):
+        """Returns the total number of samples in the dataset."""
+        return self.N_data
+
+    def __getitem__(self, index):
+        """Returns the image and label at the specified index."""
+        if isinstance(index, slice):
+            # Handle slicing
+            start, stop, step = index.indices(len(self))
+            return [self[i] for i in range(start, stop, step)]
+
+        while True:
+            image = np.random.rand(self.image_size, self.image_size)
+            rounded_image = np.round(image).astype(int)
             white_pixels = np.count_nonzero(rounded_image == 1)
             black_pixels = np.count_nonzero(rounded_image == 0)
 
             if black_pixels != white_pixels:
                 break
 
-        p_label_1 = white_pixels / self.N_pixels
+        p_label_1 = white_pixels / self.N_pixels  # Probability of labeling as 1
+        label = np.random.choice([0, 1], p=[1 - p_label_1, p_label_1])  # Sample label
 
-        # Sample the label from the conditional distribution
-        label = np.random.choice([0, 1], p=[1 - p_label_1, p_label_1])
-
-        # Convert image and label to tensors
         image_tensor = tr.tensor(image, dtype=tr.float32)
         label_tensor = tr.tensor(label, dtype=tr.long)
 
         return image_tensor, label_tensor
-
