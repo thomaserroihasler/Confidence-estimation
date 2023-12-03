@@ -1,20 +1,18 @@
 import torch as tr
-print(tr.cuda.is_available())
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
 from torchvision import datasets
 from torch.utils.data import DataLoader, random_split, Subset
-from Data_sets import CustomImageDataset
+from DataSets import CustomImageDataset
 from Networks import VGG, ResNet18, SimpleCNN # Assuming this import from Networks.py
 from torch.nn import CrossEntropyLoss, MSELoss
-from Functions import get_accuracy
+from NetworkFunctions import get_accuracy
 import numpy as np
-from DataProcessing import DynamicDiffeomorphism, typical_displacement
+from Transformations import DynamicDiffeomorphism
 import matplotlib.pyplot as plt
 
-import torch
-print(torch.version.cuda)
+print(tr.version.cuda)
 
 device = tr.device('cuda:0' if tr.cuda.is_available() else 'cpu')
 print(device)
@@ -299,7 +297,7 @@ for epoch in range(num_epochs):
         # Save the network every BATCH_FREQUENCY batches
         if total_batch_count % int(len(train_loader)/ BATCH_FREQUENCY ) == 0:
             save_path = f'./Networks/{MODEL_NAME.lower()}_{DATASET_NAME.lower()}_batch{total_batch_count}.pth'
-            torch.save(model.state_dict(), save_path)
+            tr.save(model.state_dict(), save_path)
             print(total_batch_count, save_path)
         # Periodically check the validation accuracy during training
         if (i + 1) % int(len(train_loader) / 3) == 0:

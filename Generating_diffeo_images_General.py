@@ -3,11 +3,12 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 from torchvision import datasets
 from torch.utils.data import DataLoader, random_split, Subset
-from Data_sets import CustomImageDataset
-from Networks import VGG, ResNet18, SimpleCNN, load_networks # Assuming this import from Networks.py
+from DataSets import CustomImageDataset
+from Networks import VGG, ResNet18, SimpleCNN
+from NetworkFunctions import load_networks # Assuming this import from Networks.py
 from torch.nn import CrossEntropyLoss, MSELoss
 import numpy as np
-from DataProcessing import DynamicDiffeomorphism
+from Transformations import DynamicDiffeomorphism
 import matplotlib.pyplot as plt
 import sys
 
