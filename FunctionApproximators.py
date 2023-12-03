@@ -1,10 +1,11 @@
 from DataProcessing import Binning_method
-from Functions import handle_nan
+from Functions import kNN, Nearest_lower_and_upper_bound_in_sorted_list
+
 import torch as tr
 import torch.nn as nn
 import numpy as np
-from sklearn.metrics import auc
 from abc import ABC, abstractmethod
+from sklearn.kernel_ridge import KernelRidge
 
 class FunctionApproximator(ABC, nn.Module):
     """
@@ -667,7 +668,6 @@ class Piecewise_constant(FunctionApproximator):
         x = self._check_and_convert_tensor(x)
         lower_indices, _ = Nearest_lower_and_upper_bound_in_sorted_list(self.inputs, x)
         return self.outputs[lower_indices]
-
 
 class Piecewise_linear(FunctionApproximator):
     """

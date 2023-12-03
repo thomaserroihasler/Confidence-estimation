@@ -8,8 +8,8 @@ from torch.utils.data import Subset
 import matplotlib.pyplot as plt
 from PIL import Image
 
-import torch.utils.data as data
 from torch.utils.data import Dataset
+from Functions import heavyside
 
 def fuse_datasets(dataset1, dataset2):
     """ Combine two datasets into a single dataset. """
@@ -493,9 +493,6 @@ class Standard_diffeomorphism(Diffeomorphism):
 # DEFINE FOR A DATA_POINT
 
 # Useful functions for unit_transformations:
-
-def heavyside(x):
-    return (x >= 0).float()
 
 def Total_color(x: tr.Tensor):
     return round((tr.round(x).sum() / x.numel()).item())

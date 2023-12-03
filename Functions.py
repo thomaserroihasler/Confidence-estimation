@@ -1,6 +1,11 @@
 import numpy as np
 import torch as tr
 
+
+def heavyside(x):
+    """Applies the heavy side function to x."""
+    return (x >= 0).float()
+
 def handle_nan(arr):
     """
     Replace NaN values in the array with zeros
@@ -178,7 +183,6 @@ def kNN(values, x, k):
     distances, knn_indices = dist.topk(k, dim=1, largest=False, sorted=False)
 
     return knn_indices, values.squeeze()[knn_indices], distances
-
 
 
 
