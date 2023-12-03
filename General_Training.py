@@ -10,7 +10,6 @@ from torch.nn import CrossEntropyLoss, MSELoss
 from NetworkFunctions import get_accuracy
 import numpy as np
 from Transformations import DynamicDiffeomorphism
-from TransformationFunctions import typical_displacement
 import matplotlib.pyplot as plt
 
 import torch

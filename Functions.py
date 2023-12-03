@@ -234,3 +234,11 @@ def generate_noises_on_sphere(T, N_t, shape, device):
 
 
 
+def shuffle_and_split(tensor,permutation):
+    total_samples = tensor.size(0)
+    # Apply the permutation to shuffle the data
+    shuffled_tensor = tensor[permutation]
+    # Find the midpoint
+    midpoint = total_samples // 2
+    # Split the tensor into two parts
+    return shuffled_tensor[:midpoint], shuffled_tensor[midpoint:]

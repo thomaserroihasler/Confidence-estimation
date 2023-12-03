@@ -35,7 +35,6 @@ class Naive_confidence(Output_Confidence):
         p = Softmax(x)
         return p
 
-
 class TemperatureScaledConfidence(Output_Confidence):
     def __init__(self, temperature=1.0, Probability = False):
         super(TemperatureScaledConfidence, self).__init__(Probability)
@@ -123,23 +122,12 @@ class AveragetemperatureScaledProbability(Output_Confidence):
         super(AveragetemperatureScaledProbability, self).__init__()
         self.Temperature = nn.Parameter(tr.tensor(temperature))
 
-    # def confidence_estimation(self, x):
-    #     predictions = x[:,0,-1]
-    #     new_x = x[:,:,0:-1]
-    #     softmax = nn.Softmax(dim=-1)
-    #     t_x = softmax(new_x / self.Temperature)
-    #     p_t = tr.mean(t_x,dim=1)
-    #     indices_0 = tr.arange(p_t.size(0))
-    #     c = p_t[indices_0.long(),(predictions).long()]
-    #     return c
-
     def confidence_estimation(self, x):
         new_x = x[:, :, 0:-1]
         softmax = nn.Softmax(dim=-1)
         t_x = softmax(new_x / self.Temperature)
         p_t = tr.mean(t_x, dim=1)
         return p_t
-
 
 # input based confidences
 
@@ -163,7 +151,6 @@ class hybrid_Confidence(nn.Module):
 
     def forward(self, p1,p2):
         return self.hybridization(p1,p2)
-
 
 class power_law_decay(nn.Module):
     def __init__(self,linear_parameter,power):

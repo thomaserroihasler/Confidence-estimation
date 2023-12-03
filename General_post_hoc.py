@@ -1,40 +1,22 @@
-import os
-import torch as tr
 import numpy as np
-from Measures import calculate_aurc, ECE_no_edge, MIE_no_edge, CrossEntropy
-from Predictors import ArgmaxPredictor
 import os
-from torch.utils.data import  TensorDataset
 import torch as tr
-from Functions import ECE_no_edge, MIE_no_edge, KNNGaussianKernel,NormalizedRadialBasisKernel
-from Functions import Bin_edges
-from Confidences import TemperatureScaledConfidence, AveragetemperatureScaledConfidence
 import torch.optim as optim
+from torch.utils.data import  TensorDataset
+
 from train import train_model
+from Measures import AURC, ECE, MIE, CrossEntropy
+from FunctionApproximators import  KNNGaussianKernel,NormalizedRadialBasisKernel
+from Confidences import TemperatureScaledConfidence
+from Functions import shuffle_and_split
 
 Cross_entropy = False
 New_prediction = False
 Number_of_bins =None
 Number_of_points_per_bin = None
 
-Predictor = ArgmaxPredictor(New_prediction)
-
-def shuffle_and_split(tensor,permutation):
-
-    total_samples = tensor.size(0)
-    # Create a permutation to shuffle the data
-
-    # Apply the permutation to shuffle the data
-    shuffled_tensor = tensor[permutation]
-    # Find the midpoint
-    midpoint = total_samples // 2
-    # Split the tensor into two parts
-    return shuffled_tensor[:midpoint], shuffled_tensor[midpoint:]
-
-
 DATASET_NAME = 'CIFAR-100'  # MNIST, CIFAR-10, CIFAR-100, HAM-10000
 MODEL_NAME = 'ResNet18'  # VGG, ResNet18, SimpleCNN
-#TYPE_OF_EVAL = ""
 
 base_dir = f'./Data/{MODEL_NAME.lower()}_{DATASET_NAME.lower()}.pth'
 
@@ -42,7 +24,8 @@ if os.path.exists(base_dir):
     print("Loading data from:", base_dir)
     tensors = tr.load(base_dir)
 
-    # Load each tensor directly without appending to a list
+    # Load each relevant tensors:
+
     test_accuracies = tensors['test_accuracies']
     print("test_accuracies size:", test_accuracies.shape)
 
@@ -154,8 +137,8 @@ def recursive_evaluation(params, method, current_combo={}, all_results=None):
         else:
             Number_of_points_per_bin = current_combo['Binning Numbers']
 
-        ECE = ECE_no_edge(Number_of_bins, Number_of_points_per_bin)
-        MIE = MIE_no_edge(Number_of_bins, Number_of_points_per_bin)
+        ECE_measure = ECE(Number_of_bins, Number_of_points_per_bin)
+        MIE_measure = MIE(Number_of_bins, Number_of_points_per_bin)
 
         # validation
 
@@ -217,7 +200,7 @@ def recursive_evaluation(params, method, current_combo={}, all_results=None):
             Temperature_scaled_naive_optimizer = optim.SGD(Temperature_scaled_naive_confidence.parameters(),lr=current_combo['Temperature scaling learning rate'])
             validation_set_for_Temperature_scaled_naive_confidence = TensorDataset(sub_validation_naive_outputs, sub_validation_accuracies)
 
-            Scaling_criterion = ECE_no_edge(Number_of_bins, Number_of_points_per_bin)
+            Scaling_criterion = ECE(Number_of_bins, Number_of_points_per_bin)
 
             if (Cross_entropy):
                 Scaling_criterion = CrossEntropy(New_prediction)
@@ -285,10 +268,9 @@ def recursive_evaluation(params, method, current_combo={}, all_results=None):
             # Iterate over the dictionary and calculate ECE, MIE, and AURC for each confidence measure
             results = {}
             for name, confidences in confidence_measures.items():
-                rcr, error, aurc = calculate_aurc(confidences,
-                                                  sub_test_accuracies)  # Replace with actual AURC calculation function
-                ece = ECE(confidences, sub_test_accuracies)  # Replace with actual ECE calculation function
-                mie = MIE(confidences, sub_test_accuracies)  # Replace with actual MIE calculation function
+                rcr, error, aurc = AURC(confidences, sub_test_accuracies)  # Replace with actual AURC calculation function
+                ece = ECE_measure(confidences, sub_test_accuracies)  # Replace with actual ECE calculation function
+                mie = MIE_measure(confidences, sub_test_accuracies)  # Replace with actual MIE calculation function
 
                 # Calculate the mean of sub_test_accuracies to get test accuracy
                 test_accuracy = sub_test_accuracies.float().mean().item()  # Assuming sub_test_accuracies is a tensor
@@ -327,7 +309,6 @@ def recursive_evaluation(params, method, current_combo={}, all_results=None):
 # Usage
 for method, params in EVAL_METHODS.items():
     all_evaluations = recursive_evaluation(params, method)
-    #print('hello')
     # After all evaluations, save all_results to Final_Data directory
     res_and_eval_dir = './Final_Data/'+f'{MODEL_NAME.lower()}_{DATASET_NAME.lower()}'
     if not os.path.exists(res_and_eval_dir):

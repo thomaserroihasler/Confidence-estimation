@@ -1,5 +1,4 @@
-from DataProcessing import
-from Functions import handle_nan
+from Functions import handle_nan, Bin_edges, Single_bit_entropy_func
 import torch as tr
 import torch.nn as nn
 import numpy as np
@@ -47,16 +46,16 @@ class ECE(nn.Module):
     """
     ECE class: calculates Expected Calibration Error (ECE) using defined bin edges.
     """
-    def __init__(self, bin_edges):
+    def __init__(self, num_bins=None, num_per_bin=5):
         super(ECE, self).__init__()
-        self.bin_edges = bin_edges
-        self.num_bins = len(bin_edges) - 1
+        self.num_bins = num_bins
+        self.num_per_bin = num_per_bin
 
     def forward(self, confidence, accuracy):
         sorted_indices = tr.argsort(confidence)
         confidence = confidence[sorted_indices]
         accuracy = accuracy[sorted_indices]
-
+        self.bin_edges = Bin_edges(confidence, self.num_bins, self.num_per_bin)
         # Compute bin sizes, confidences, and accuracies
         bin_sizes, bin_confidences, bin_accuracies = self.calculate_bins(confidence, accuracy)
 
@@ -67,79 +66,46 @@ class ECE(nn.Module):
 
     def calculate_bins(self, confidence, accuracy):
         # Bin sizes, confidences, and accuracies for each bin
-        bin_sizes = tr.Tensor([((confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])).sum().item() for i in range(self.num_bins)])
-        bin_confidences = tr.Tensor([confidence[(confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])].mean().item() for i in range(self.num_bins)])
-        bin_accuracies = tr.Tensor([accuracy[(confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])].mean().item() for i in range(self.num_bins)])
+        bin_sizes = tr.Tensor([((confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])).sum().item() for i in range(len(self.bin_edges)-1)])
+        bin_confidences = tr.Tensor([confidence[(confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])].mean().item() for i in range(len(self.bin_edges)-1)])
+        bin_accuracies = tr.Tensor([accuracy[(confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])].mean().item() for i in range(len(self.bin_edges)-1)])
         return bin_sizes, bin_confidences, bin_accuracies
 
-class ECE_probability(nn.Module):
+
+
+class MIE(nn.Module):
     """
-    ECE_probability class: calculates Expected Calibration Error (ECE) without considering the edge case.
+    MIE class: calculates Expected Calibration Error (ECE) using defined bin edges.
     """
-    def __init__(self, num_bins=None, num_per_bin=50, New_prediction=False):
-        super(ECE_probability, self).__init__()
+    def __init__(self, num_bins=None, num_per_bin=5):
+        super(MIE, self).__init__()
         self.num_bins = num_bins
         self.num_per_bin = num_per_bin
-        self.New_prediction = New_prediction
 
-    def forward(self, outputs, labels):
-        # Select probabilities tensor based on New_prediction
-        probabilities, indices = outputs
-        confidence = self.get_confidence(probabilities, indices)
-
-        # Predicted labels based on probabilities
-        predicted_labels = tr.argmax(probabilities, dim=-1)
-
-        # Calculate accuracy and sort inputs by confidence
-        accuracy = (predicted_labels == labels).float()
-        confidence, bin_edges, accuracy = self.sort_and_bin(confidence, accuracy)
-
-        # Compute ECE loss
-        ece_loss = self.calculate_ece(confidence, accuracy, bin_edges)
-
-        return ece_loss
-
-    def get_confidence(self, probabilities, indices):
-        # Extract confidence values from the predicted probabilities
-        indices_0 = tr.arange(probabilities.size(0))
-        return probabilities[indices_0.long(), indices.long()]
-
-    def sort_and_bin(self, confidence, accuracy):
-        # Sort confidence and determine bin edges
-        confidence, sorted_indices = tr.sort(confidence)
-        bin_edges = Binning_method(confidence, self.num_bins, self.num_per_bin)
+    def forward(self, confidence, accuracy):
+        sorted_indices = tr.argsort(confidence)
+        confidence = confidence[sorted_indices]
         accuracy = accuracy[sorted_indices]
-        return confidence, bin_edges, accuracy
+        self.bin_edges = Bin_edges(confidence, self.num_bins, self.num_per_bin)
+        # Compute bin sizes, confidences, and accuracies
+        bin_sizes, bin_confidences, bin_accuracies = self.calculate_bins(confidence, accuracy)
 
-    def calculate_ece(self, confidence, accuracy, bin_edges):
-        # Calculate ECE loss using bin sizes, confidences, and accuracies
-        N_bins = len(bin_edges) - 1
-        bin_confidences, bin_accuracies, bin_sizes = [tr.zeros(N_bins) for _ in range(3)]
+        # Calculate ECE loss
+        mie_loss = ((bin_sizes.float() / len(confidence)) * Single_bit_entropy_func(bin_accuracies)).sum()
 
-        for i in range(N_bins):
-            mask = self.get_bin_mask(confidence, bin_edges, i)
-            if mask.sum() > 0:
-                bin_confidences[i] = confidence[mask].mean()
-                bin_accuracies[i] = accuracy[mask].mean()
-                bin_sizes[i] = mask.sum()
+        return mie_loss
 
-        bin_sizes = bin_sizes.float()
-        ece_loss = (bin_sizes / len(confidence)).mul(tr.abs(bin_accuracies - bin_confidences)).sum()
-        return ece_loss
-
-    def get_bin_mask(self, confidence, bin_edges, i):
-        # Create mask for each bin range
-        if i == 0:
-            return (confidence >= bin_edges[i]) & (confidence <= bin_edges[i + 1])
-        else:
-            return (confidence > bin_edges[i]) & (confidence <= bin_edges[i + 1])
-
-# Similar structure and logic is applied for the ECE_no_edge and MIE classes.
-# The ECE_no_edge class calculates ECE without considering edge cases, and the MIE class estimates Mutual Information.
-# Various utility functions like get_2Dhjoint_and_edges, get_1Dhjoint_and_edges, get_bins, get_1Daccuracy, and get_2Daccuracy are provided to support these calculations.
+    def calculate_bins(self, confidence, accuracy):
+        # Bin sizes, confidences, and accuracies for each bin
+        bin_sizes = tr.Tensor([((confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])).sum().item() for i in range(len(self.bin_edges)-1)])
+        bin_confidences = tr.Tensor([confidence[(confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])].mean().item() for i in range(len(self.bin_edges)-1)])
+        bin_accuracies = tr.Tensor([accuracy[(confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])].mean().item() for i in range(len(self.bin_edges)-1)])
+        return bin_sizes, bin_confidences, bin_accuracies
 
 
-def calculate_auroc(confidence_scores, accuracies):
+
+
+def AUROC(confidence_scores, accuracies):
     """
     Calculate the Area Under the Receiver Operating Characteristic (AUROC) curve.
 
@@ -159,7 +125,7 @@ def calculate_auroc(confidence_scores, accuracies):
     fpr = handle_nan([np.mean(confidence_scores_np[accuracies_np == 0] >= t) for t in thresholds])
     return fpr, tpr, auc(fpr, tpr)
 
-def calculate_aupr(confidence_scores, accuracies):
+def AUPR(confidence_scores, accuracies):
     """
     Calculate the Area Under the Precision-Recall (AUPR) curve.
 
@@ -179,7 +145,7 @@ def calculate_aupr(confidence_scores, accuracies):
     recall = handle_nan([np.mean(confidence_scores_np[accuracies_np == 1] >= t) for t in thresholds])
     return recall, precision, auc(recall, precision)
 
-def calculate_aurc(confidence_scores, accuracies):
+def AURC(confidence_scores, accuracies):
     """
     Calculate the Area Under the Risk-Coverage (AURC) curve.
 
@@ -198,7 +164,7 @@ def calculate_aurc(confidence_scores, accuracies):
     rcr = handle_nan([np.sum(confidence_scores_np >= t) / len(confidence_scores_np) for t in thresholds])
     return rcr, error, auc(rcr, error)
 
-def calculate_brier_score(forecast_probabilities, actual_outcomes):
+def Brier_score(forecast_probabilities, actual_outcomes):
     """
     Calculate the Brier score for probabilistic forecasts.
 
