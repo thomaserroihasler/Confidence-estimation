@@ -5,7 +5,7 @@ import torch.optim as optim
 import torchvision.transforms as transforms
 from torchvision import datasets
 from torch.utils.data import DataLoader, random_split, Subset
-from Data_sets import CustomImageDataset
+from DataSets import CustomImageDataset
 from Networks import VGG, ResNet18, SimpleCNN # Assuming this import from Networks.py
 from torch.nn import CrossEntropyLoss, MSELoss
 from Functions import get_accuracy

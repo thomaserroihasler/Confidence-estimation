@@ -1,6 +1,8 @@
 import numpy as np
 import torch as tr
-
+import matplotlib.pyplot as plt
+from PIL import Image
+import math as mt
 
 def heavyside(x):
     """Applies the heavy side function to x."""
@@ -48,30 +50,27 @@ def Nearest_lower_and_upper_bound(values, x):
     values, indices = tr.sort(values)
     return Nearest_lower_and_upper_bound_in_sorted_list(values, x)
 
-def get_accuracy(loader, model, device):
-    """
-    Calculate the accuracy of a model on a given dataset.
+def Bin_edges(data, num_bins=None, num_per_bin=5):
+    """ Bin data into a specified number of bins. """
+    data = data.to(dtype=tr.float64)  # Convert to higher precision
+    data = tr.sort(data).values  # Sort the data
 
-    Args:
-        loader: DataLoader for the dataset.
-        model: Neural network model to evaluate.
-        device: The device (CPU or GPU) to perform calculations on.
+    # Determine bin edges based on quantiles
+    if num_bins is not None:
+        # Fixed number of bins
+        quantiles = tr.linspace(0, 1, num_bins + 1).to(dtype=tr.float64)[1:-1]  # Exclude 0 and 1
+        bin_edges = tr.quantile(data, quantiles)
+    else:
+        # Determine the number of bins based on num_per_bin
+        num_bins = max(mt.ceil(len(data) / num_per_bin), 1)
+        quantiles = tr.linspace(0, 1, num_bins + 1).to(dtype=tr.float64)[1:-1]  # Exclude 0 and 1
+        bin_edges = tr.quantile(data, quantiles)
 
-    Returns:
-        Accuracy as a percentage.
-    """
-    correct = 0
-    total = 0
-    model.eval()  # Set the model to evaluation mode to disable dropout, etc.
-    with tr.no_grad():  # Disable gradient calculations
-        for images, labels in loader:
-            images, labels = images.to(device), labels.to(device)  # Move images and labels to the specified device
-            outputs = model(images)
-            _, predicted = tr.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    model.train()  # Set the model back to training mode
-    return 100 * correct / total
+    # Finalize bin edges
+    unique_edges = tr.unique(bin_edges)  # Remove duplicates
+    sorted_edges = tr.sort(unique_edges).values  # Sort edges
+    sorted_edges = tr.cat((tr.tensor([data.min()]), sorted_edges, tr.tensor([data.max()])))  # Add min and max
+    return sorted_edges
 
 def Single_bit_entropy_func(a):
     """
@@ -185,6 +184,53 @@ def kNN(values, x, k):
     return knn_indices, values.squeeze()[knn_indices], distances
 
 
+def show_tensor(tensor, filename):
+    """ Convert a PyTorch tensor to an image and display/save it. """
+    array = tensor.cpu().numpy()  # Convert tensor to NumPy array
+    dims = len(array.shape)  # Get the number of dimensions
+
+    # Create and display the image
+    if dims == 1:
+        # 1D tensor to grayscale image
+        image = np.zeros((1, array.shape[0]), dtype=np.uint8)
+        image[0, :] = (array * 255).astype(np.uint8)
+    elif dims == 3:
+        # 3D tensor to color image
+        image = np.transpose((array * 255).astype(np.uint8), (1, 2, 0))
+    else:
+        # 2D tensor to black and white image
+        image = (array * 255).astype(np.uint8)
+
+    plt.imshow(image, cmap='gray' if dims == 1 or dims == 2 else None)
+    plt.axis('off')
+    plt.show()
+
+    # Save the image if filename is provided
+    if filename is not None:
+        image = Image.fromarray(image)
+        image.save(filename)
+
+def sample_points_on_sphere(num_points, dim, device):
+    """Sample uniformly distributed points on a hypersphere of the given dimension."""
+    vec = tr.randn(num_points, dim, device=device)
+    vec /= vec.norm(dim=1, keepdim=True)
+    return vec
+
+def generate_noises_on_sphere(T, N_t, shape, device):
+    """Generate N_t noises of dimension d for each element in T with norm equal to T[i]
+       and uniformly distributed on the sphere of dimension d."""
+    T = T.reshape(-1, 1, 1).to(device)  # reshape T to (N_b, 1, 1)
+    tensor_shape_as_tensor = tr.tensor(shape, dtype=tr.int64, device=device)
+    d = tensor_shape_as_tensor.prod()
+    N_b = T.shape[0]
+    sphere_points = sample_points_on_sphere(N_t, d, device)  # sample sphere points
+    sphere_points = sphere_points.reshape(1, N_t, d).to(device)  # reshape to (1, N_t, d)
+    sphere_points = sphere_points.expand(T.shape[0], -1, -1)  # expand to (N_b, N_t, d)
+    noises = T * sphere_points  # scale sphere points by T
+    assert noises.numel() == d * N_b * N_t
+
+
+    return noises.view(N_b, N_t, *shape)
 
 
 
