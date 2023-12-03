@@ -1,15 +1,14 @@
 import os
 import torch as tr
 import numpy as np
-from Functions import calculate_aurc, ECE_no_edge, MIE_no_edge
-from Functions import  ArgmaxPredictor, CrossEntropy
+from Measures import calculate_aurc, ECE_no_edge, MIE_no_edge, CrossEntropy
+from Predictors import ArgmaxPredictor
 import os
 from torch.utils.data import  TensorDataset
 import torch as tr
 from Functions import ECE_no_edge, MIE_no_edge, KNNGaussianKernel,NormalizedRadialBasisKernel
-from Figures import reliability_diagram
-from DataProcessing import Binning_method
-from Confidence import TemperatureScaledConfidence, AveragetemperatureScaledConfidence
+from Functions import Bin_edges
+from Confidences import TemperatureScaledConfidence, AveragetemperatureScaledConfidence
 import torch.optim as optim
 from train import train_model
 

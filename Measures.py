@@ -1,4 +1,4 @@
-from DataProcessing import Binning_method
+from DataProcessing import
 from Functions import handle_nan
 import torch as tr
 import torch.nn as nn

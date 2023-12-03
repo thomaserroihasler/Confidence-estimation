@@ -1,5 +1,4 @@
 import torch as tr
-print(tr.cuda.is_available())
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
@@ -8,9 +7,10 @@ from torch.utils.data import DataLoader, random_split, Subset
 from DataSets import CustomImageDataset
 from Networks import VGG, ResNet18, SimpleCNN # Assuming this import from Networks.py
 from torch.nn import CrossEntropyLoss, MSELoss
-from Functions import get_accuracy
+from NetworkFunctions import get_accuracy
 import numpy as np
-from DataProcessing import DynamicDiffeomorphism, typical_displacement
+from Transformations import DynamicDiffeomorphism
+from TransformationFunctions import typical_displacement
 import matplotlib.pyplot as plt
 
 import torch
@@ -68,7 +68,6 @@ def mixup_data(x, y, alpha=1.0, device=device):
 
 def mixup_criterion(criterion, pred, y_a, y_b, lam):
     return lam * criterion(pred, y_a) + (1 - lam) * criterion(pred, y_b)
-
 
 LOSS_FUNCTIONS = {
     'label_smoothed_crossentropy': LabelSmoothedCrossEntropyLoss(epsilon=0.1),
@@ -319,4 +318,3 @@ with tr.no_grad():
 save_path = f'./Networks/{MODEL_NAME.lower()}_{DATASET_NAME.lower()}.pth'
 print('Network saved location is', save_path)
 tr.save(model.state_dict(), save_path)
-
