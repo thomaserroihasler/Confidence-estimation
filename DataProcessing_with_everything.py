@@ -165,6 +165,63 @@ def Binning_method(data, num_bins=None, num_per_bin=5):
     sorted_edges = tr.cat((tr.tensor([data.min()]), sorted_edges, tr.tensor([data.max()])))  # Add min and max
     return sorted_edges
 
+#
+#
+# def Binning_method(data, num_bins=None, num_per_bin=5):
+#     data = data.to(dtype=tr.float64)  # convert to higher precision before computations
+#     data = tr.sort(data).values
+#
+#     if num_bins is not None:
+#         quantiles = tr.linspace(0, 1, num_bins + 1).to(dtype=tr.float64)
+#         bin_edges = tr.quantile(data, quantiles)
+#
+#     else:
+#         num_bins = max(mt.ceil(len(data) / num_per_bin), 1)
+#         bin_edges = tr.zeros(num_bins + 1, dtype=tr.float64)
+#         bin_edges[0] = 0
+#         bin_edges[-1] = 1
+#         for i in range(num_bins):
+#             end = (i + 1) * num_per_bin - 1
+#             start = (i + 1) * num_per_bin
+#             if end >= (len(data) - 1):
+#                 unique_edges = tr.unique(bin_edges)
+#                 return unique_edges
+#             else:
+#                 bin_edges[i + 1] = (data[start] + data[end]) / 2.0
+#
+#     # Remove duplicate bin edges
+#     unique_edges = tr.unique(bin_edges)
+#     return unique_edges
+
+
+
+#
+#
+# def Binning_method(data, num_bins=None, num_per_bin=5):
+#     if num_bins is not None:
+#         return tr.linspace(0, 1, num_bins + 1)
+#     else:
+#         data = tr.sort(data).values
+#
+#         num_bins = max(mt.ceil(len(data) / num_per_bin), 1)
+#
+#         bin_edges = tr.zeros(num_bins + 1)
+#         bin_edges[0] = 0
+#         bin_edges[-1] = 1
+#         for i in range(num_bins):
+#             end = (i + 1) * num_per_bin - 1
+#             start = (i + 1) * num_per_bin
+#             if end >= (len(data) - 1):
+#                 unique_edges = tr.unique(bin_edges)
+#                 return unique_edges
+#             else:
+#                 bin_edges[i + 1] = (data[start] + data[end]) / 2.0
+#
+#         # Remove duplicate bin edges
+#         unique_edges = tr.unique(bin_edges)
+#         return unique_edges
+
+
 class Transformation(nn.Module):
     """ Base class for transformations, requiring subclasses to implement the transform method. """
     def __init__(self):
