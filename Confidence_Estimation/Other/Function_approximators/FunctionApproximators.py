@@ -1,5 +1,4 @@
-from DataProcessing import Binning_method
-from Functions import kNN, Nearest_lower_and_upper_bound_in_sorted_list
+from Functions import Bin_edges, kNN, Nearest_lower_and_upper_bound_in_sorted_list
 
 import torch as tr
 import torch.nn as nn
@@ -112,8 +111,8 @@ class Box_accuracy(nn.Module):
         self.accuracy = accuracy
 
         # Compute the bin edges using the Binning_method function
-        self.xedges = Binning_method(tr.tensor(self.confidences[:, 0]), num_bins=int(np.sqrt(self.num_bins)))
-        self.yedges = Binning_method(tr.tensor(self.confidences[:, 1]), num_bins=int(np.sqrt(self.num_bins)))
+        self.xedges = Bin_edges(tr.tensor(self.confidences[:, 0]), num_bins=int(np.sqrt(self.num_bins)))
+        self.yedges = Bin_edges(tr.tensor(self.confidences[:, 1]), num_bins=int(np.sqrt(self.num_bins)))
 
         # Compute the bin number for each point
         self.binnumber = np.ravel_multi_index([
