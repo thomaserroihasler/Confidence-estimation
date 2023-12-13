@@ -122,6 +122,7 @@ def filter_classes(dataset, classes_to_include, dataset_name):
         indices = [i for i in range(len(dataset)) if dataset.dataset.labels[i] in classes_to_include]
     return Subset(dataset, indices)
 
+
 def load_and_preprocess_data(dataset_name, transformations, split_sizes , classes_to_include=None):
     test_and_val_size = 0
 

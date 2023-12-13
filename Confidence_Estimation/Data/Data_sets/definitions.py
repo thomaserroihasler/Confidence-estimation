@@ -1,7 +1,6 @@
 import torch as tr
 from torch.utils.data import Dataset
-import numpy as np
-import math as mt
+
 
 class TensorDataset(Dataset):
     """ Custom dataset for pairing inputs and outputs. """
@@ -10,6 +9,7 @@ class TensorDataset(Dataset):
         super(TensorDataset, self).__init__()
         assert len(inputs) == len(outputs), "Inputs and outputs must have the same length"
         self.inputs = inputs
+
         self.outputs = outputs
 
     def __len__(self):
@@ -17,6 +17,7 @@ class TensorDataset(Dataset):
         return len(self.inputs)
 
     def __getitem__(self, idx):
+        print(type(self.inputs[idx]))
         # Return the input-output pair at the specified index
         return self.inputs[idx], self.outputs[idx]
 
@@ -33,15 +34,12 @@ class CustomTransformDataset(Dataset):
 
     def __getitem__(self, idx):
         img, label = self.dataset[idx]
-
-        # Check if the image is a PIL Image or ndarray before applying the transformation
         if self.transform:
-            if not isinstance(img, tr.Tensor):
-                transformed_imgs = [self.transform(img) for _ in range(self.N)]
-            else:
-                # The image is already a tensor, so we skip the ToTensor transformation
-                transformed_imgs = [img for _ in range(self.N)]
+            # Apply the transformation N times and create a tensor
+            transformed_imgs = tr.stack([self.transform(img) for _ in range(self.N)])
         else:
-            transformed_imgs = [img for _ in range(self.N)]
+            # If no transformation, repeat the image tensor N times
+            transformed_imgs = img.unsqueeze(0).repeat(self.N, 1, 1, 1)
 
         return transformed_imgs, label
+

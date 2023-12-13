@@ -31,22 +31,31 @@ SPLIT_SIZES = {
     "test": 0.2  # 20% data for testing
 }
 
+from torchvision import transforms
+
+# Define basic transformations
 BASIC_TRANSFORMATIONS = transforms.Compose([
     transforms.ToTensor()
 ])
 
-# Define transformations
-TRANSFORMATIONS = transforms.Compose([
-    transforms.ToTensor()  # Convert images to PyTorch tensors
+ADDITIONAL_TRANSFORMATIONS = transforms.Compose([
+    transforms.RandomHorizontalFlip(),  # Randomly flip the image horizontally
+    transforms.RandomVerticalFlip()     # Randomly flip the image vertically
 ])
+
+# Combine basic and additional transformations
+# TRANSFORMATIONS = transforms.Compose([
+#     *BASIC_TRANSFORMATIONS.transforms,
+#     *ADDITIONAL_TRANSFORMATIONS
+# ])
 
 # Define minimal ToTensor transformation
 
 # Load datasets with transformations
-_, validation_set, test_set = load_and_preprocess_data(DATASET_NAME, TRANSFORMATIONS, SPLIT_SIZES, NUMBER_OF_CLASSES)
+_, validation_set, test_set = load_and_preprocess_data(DATASET_NAME,BASIC_TRANSFORMATIONS, SPLIT_SIZES, NUMBER_OF_CLASSES)
 
 # Load datasets with only ToTensor transformation
-_, validation_set_nt, test_set_nt = load_and_preprocess_data(DATASET_NAME, BASIC_TRANSFORMATIONS, SPLIT_SIZES, NUMBER_OF_CLASSES)
+_, validation_set_nt, test_set_nt = load_and_preprocess_data(DATASET_NAME, BASIC_TRANSFORMATIONS,SPLIT_SIZES, NUMBER_OF_CLASSES)
 
 # Define batch size
 BATCH_SIZE = 32
@@ -62,9 +71,9 @@ Networks = {
 }
 
 # Creating DataLoaders for datasets
-N = 10  # Number of transformations per image
-validation_loader = DataLoader(CustomTransformDataset(validation_set, transform=TRANSFORMATIONS, N=N), batch_size=BATCH_SIZE, shuffle=False)
-test_loader = DataLoader(CustomTransformDataset(test_set, transform=TRANSFORMATIONS, N=N), batch_size=BATCH_SIZE, shuffle=False)
+N = 2  # Number of transformations per image
+validation_loader = DataLoader(CustomTransformDataset(validation_set, transform=ADDITIONAL_TRANSFORMATIONS, N=N), batch_size=BATCH_SIZE, shuffle=False)
+test_loader = DataLoader(CustomTransformDataset(test_set, transform=ADDITIONAL_TRANSFORMATIONS, N=N), batch_size=BATCH_SIZE, shuffle=False)
 
 # DataLoaders for the datasets with only ToTensor transformation
 validation_loader_nt = DataLoader(validation_set_nt, batch_size=BATCH_SIZE, shuffle=False)
@@ -76,6 +85,7 @@ if not os.path.exists(OUTPUT_LOCATION):
 
 # Dictionary to store model outputs and labels
 all_model_data = {}
+
 
 for model_name, model in Networks.items():
     model.to(device)
@@ -91,17 +101,25 @@ for model_name, model in Networks.items():
         all_labels = []
 
         # Process dataset with N transformations
-        for batch in loader:
-            inputs, labels = batch
-            # CONVERT INPUTS TO TENSORS & PARRALELIZE
-            #plot_sample_images(inputs, labels, 'test')
-            inputs = [item.to(device) for sublist in inputs for item in sublist]  # Flatten and send to device
-            labels = labels.to(device).repeat(N)  # Repeat labels N times
+        for inputs, labels in loader:
+            # Reshape inputs if they have an extra dimension for transformations
+            if inputs.dim() == 5:  # Assuming shape [batch_size, N, channels, height, width]
+                batch_size, N, C, H, W = inputs.size()
+                inputs = inputs.view(-1, C, H, W)  # Merge batch and N dimensions
+
+            inputs = inputs.to(device)
+            labels = labels.to(device)  # No need to repeat labels
 
             with tr.no_grad():
-                outputs = [model(input_tensor.unsqueeze(0)) for input_tensor in inputs]  # Process each transformed input
-            all_outputs_transformed.extend(outputs)
-            all_labels.extend([label for label in labels])
+                outputs = model(inputs)
+            # Reshape outputs to [N, set_size, dimension_of_output]
+            outputs = outputs.view(-1, N, *outputs.shape[1:])
+            all_outputs_transformed.append(outputs)
+            all_labels.extend(labels)
+
+        # Concatenate all outputs and labels on GPU and then move to CPU
+        final_output_transformed = tr.cat(all_outputs_transformed, dim=0).cpu()  # Concatenate along set_size dimension
+        final_labels = tr.tensor(all_labels).cpu()
 
         # Process dataset with only ToTensor transformation
         for inputs, labels in loader_nt:
@@ -111,10 +129,8 @@ for model_name, model in Networks.items():
                 outputs = model(inputs)
             all_outputs_original.append(outputs.cpu())
 
-        # Concatenate all outputs and labels
-        final_output_transformed = tr.cat([output.cpu() for output in all_outputs_transformed], dim=0)
+        # Concatenate all outputs for original dataset
         final_output_original = tr.cat(all_outputs_original, dim=0)
-        final_labels = tr.tensor(all_labels)
 
         # Store outputs and labels in the dictionary
         model_data[dataset_name] = {
