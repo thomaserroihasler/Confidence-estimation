@@ -4,6 +4,23 @@ import warnings
 import torch.nn as nn
 import torch.nn.functional as F
 
+class TemperatureScalingBlock(nn.Module):
+    """
+    TemperatureScalingBlock: A module for temperature scaling, used to calibrate model predictions.
+    """
+    def __init__(self, Temperature=1.0):
+        super(TemperatureScalingBlock, self).__init__()
+        self.Temperature = nn.Parameter(tr.ones(1) * Temperature, requires_grad=True)
+
+    def forward(self, input):
+        # Divide each logit by the temperature parameter
+        output = input / self.Temperature
+        return output
+
+
+# SOFTMAX BLOCKS
+
+
 class SquareDiagonalLinear(nn.Module):
     """
     SquareDiagonalLinear: A linear layer with a diagonal weight matrix, implemented using matrix multiplication.

@@ -6,7 +6,7 @@ from sklearn.metrics import auc
 
 new_path =  sys.path[0].split("Confidence_Estimation")[0] + "Confidence_Estimation"
 sys.path[0] = new_path
-from Confidence_Estimation.Other.Useful_functions.Definitions import handle_nan, Bin_edges, Single_bit_entropy_func
+from Confidence_Estimation.Other.Useful_functions.definitions import handle_nan, Bin_edges, Single_bit_entropy_func
 
 class TrueFalseMeasure(nn.Module):
     """
@@ -34,7 +34,8 @@ class CrossEntropy(nn.Module):
     def __init__(self):
         super(CrossEntropy, self).__init__()
 
-    def forward(self, predicted, target):
+    def forward(self, predicted, target_pred):
+        target = target_pred[:,0]
         # number of samples
         N = predicted.shape[0]
 
@@ -71,6 +72,7 @@ class ECE(nn.Module):
         self.num_per_bin = num_per_bin
 
     def forward(self, confidence, accuracy):
+
         sorted_indices = tr.argsort(confidence)
         confidence = confidence[sorted_indices]
         accuracy = accuracy[sorted_indices]
@@ -87,7 +89,54 @@ class ECE(nn.Module):
         # Bin sizes, confidences, and accuracies for each bin
         bin_sizes = tr.Tensor([((confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])).sum().item() for i in range(len(self.bin_edges)-1)])
         bin_confidences = tr.Tensor([confidence[(confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])].mean().item() for i in range(len(self.bin_edges)-1)])
-        bin_accuracies = tr.Tensor([accuracy[(confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])].mean().item() for i in range(len(self.bin_edges)-1)])
+        bin_accuracies = tr.Tensor([accuracy[(confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])].float().mean().item() for i in range(len(self.bin_edges)-1)])
+        return bin_sizes, bin_confidences, bin_accuracies
+
+
+class ECEWithProbabilities(nn.Module):
+    """
+    ECEWithProbabilities class: calculates Expected Calibration Error (ECE) using probabilities and actual predictions.
+    """
+    def __init__(self, num_bins=None, num_per_bin=5):
+        super(ECEWithProbabilities, self).__init__()
+        self.num_bins = num_bins
+        self.num_per_bin = num_per_bin
+
+    def forward(self, probabilities, target_pred):
+        # Get the predicted class and confidence from probabilities
+        labels = target_pred[:,0]
+        predictions = target_pred[:,1]
+        confidences = # probabilities along the direction of prediction
+        accuracy = (predictions == labels).float()
+
+        # Sort by confidence
+        sorted_indices = tr.argsort(confidences)
+        confidences = confidences[sorted_indices]
+        accuracy = accuracy[sorted_indices]
+
+        # Compute bin edges
+        self.bin_edges = self._calculate_bin_edges(confidences)
+
+        # Compute bin sizes, confidences, and accuracies
+        bin_sizes, bin_confidences, bin_accuracies = self._calculate_bins(confidences, accuracy)
+
+        # Calculate ECE loss
+        ece_loss = ((bin_sizes.float() / len(confidences)) * tr.abs(bin_accuracies - bin_confidences)).sum()
+
+        return ece_loss
+
+    def _calculate_bin_edges(self, confidences):
+        # Calculate the bin edges based on the confidence scores
+        if self.num_bins is None:
+            self.num_bins = int(len(confidences) / self.num_per_bin)
+        bin_edges = tr.linspace(0, 1, steps=self.num_bins + 1)
+        return bin_edges
+
+    def _calculate_bins(self, confidences, accuracy):
+        # Calculate bin sizes, confidences, and accuracies for each bin
+        bin_sizes = tr.Tensor([((confidences > self.bin_edges[i]) & (confidences <= self.bin_edges[i+1])).sum().item() for i in range(len(self.bin_edges)-1)])
+        bin_confidences = tr.Tensor([confidences[(confidences > self.bin_edges[i]) & (confidences <= self.bin_edges[i+1])].mean().item() for i in range(len(self.bin_edges)-1)])
+        bin_accuracies = tr.Tensor([accuracy[(confidences > self.bin_edges[i]) & (confidences <= self.bin_edges[i+1])].mean().item() for i in range(len(self.bin_edges)-1)])
         return bin_sizes, bin_confidences, bin_accuracies
 
 
@@ -118,7 +167,7 @@ class MIE(nn.Module):
         # Bin sizes, confidences, and accuracies for each bin
         bin_sizes = tr.Tensor([((confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])).sum().item() for i in range(len(self.bin_edges)-1)])
         bin_confidences = tr.Tensor([confidence[(confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])].mean().item() for i in range(len(self.bin_edges)-1)])
-        bin_accuracies = tr.Tensor([accuracy[(confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])].mean().item() for i in range(len(self.bin_edges)-1)])
+        bin_accuracies = tr.Tensor([accuracy[(confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])].float().mean().item() for i in range(len(self.bin_edges)-1)])
         return bin_sizes, bin_confidences, bin_accuracies
 
 

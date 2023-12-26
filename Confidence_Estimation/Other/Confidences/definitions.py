@@ -1,28 +1,30 @@
 import torch.nn as nn
 import torch as tr
 
-new_path =  sys.path[0].split("Confidence_Estimation")[0] + "Confidence_Estimation"
-sys.path[0] = new_path
-
-from Stabilities_and_distributions import noise_relative_stability, coherency, coherency_probability
-
 # Output based confidences
 
+import torch.nn as nn
+
 class Output_Confidence(nn.Module):
-    def __init__(self,Probability = False):
+    def __init__(self, Probability=False):
         super(Output_Confidence, self).__init__()
         self.Probability = Probability
-    def confidence_estimation(self,x):
-        raise NotImplementedError("Subclasses must implement transform method")
 
-    def probability_estimation(self,x):
-        raise NotImplementedError("Subclasses must implement transform method")
+    def confidence_estimation(self, x):
+        raise NotImplementedError("Subclasses must implement confidence_estimation method")
+
+    def probability_estimation(self, x):
+        raise NotImplementedError("Subclasses must implement probability_estimation method")
 
     def forward(self, x):
-        if(self.Probability):
+        if self.Probability:
             return self.probability_estimation(x)
         else:
             return self.confidence_estimation(x)
+
+    def change_behaviour(self):
+        # Toggle the Probability attribute
+        self.Probability = not self.Probability
 
 class Naive_confidence(Output_Confidence):
     def __init__(self,Probability = False):
@@ -132,37 +134,37 @@ class AveragetemperatureScaledProbability(Output_Confidence):
         t_x = softmax(new_x / self.Temperature)
         p_t = tr.mean(t_x, dim=1)
         return p_t
-
-# input based confidences
-
-def Coherency_confidence(transformations, network, x):
-    return coherency(transformations, network, x)
-
-def Probability_coherency_confidences(transformations, network, x):
-    return coherency_probability(transformations, network, x)
-
-def Noise_relative_stability_confidence(transformations, network, x,normalization_function):
-    return (noise_relative_stability(transformations, network, x))
-
-# hybrid confidences
-
-class hybrid_Confidence(nn.Module):
-    def __init__(self):
-        super(Output_Confidence, self).__init__()
-
-    def hybridization(self,p1,p2):
-        raise NotImplementedError("Subclasses must implement transform method")
-
-    def forward(self, p1,p2):
-        return self.hybridization(p1,p2)
-
-class power_law_decay(nn.Module):
-    def __init__(self,linear_parameter,power):
-        super(power_law_decay, self).__init__()
-        self.linear_parameter = linear_parameter
-        self.power = power
-    def hybridization(self,x):
-        raise
-
-    def forward(self, p1,p2):
-        return self.hybridization(p1,p2)
+#
+# # input based confidences
+#
+# def Coherency_confidence(transformations, network, x):
+#     return coherency(transformations, network, x)
+#
+# def Probability_coherency_confidences(transformations, network, x):
+#     return coherency_probability(transformations, network, x)
+#
+# def Noise_relative_stability_confidence(transformations, network, x,normalization_function):
+#     return (noise_relative_stability(transformations, network, x))
+#
+# # hybrid confidences
+#
+# class hybrid_Confidence(nn.Module):
+#     def __init__(self):
+#         super(Output_Confidence, self).__init__()
+#
+#     def hybridization(self,p1,p2):
+#         raise NotImplementedError("Subclasses must implement transform method")
+#
+#     def forward(self, p1,p2):
+#         return self.hybridization(p1,p2)
+#
+# class power_law_decay(nn.Module):
+#     def __init__(self,linear_parameter,power):
+#         super(power_law_decay, self).__init__()
+#         self.linear_parameter = linear_parameter
+#         self.power = power
+#     def hybridization(self,x):
+#         raise
+#
+#     def forward(self, p1,p2):
+#         return self.hybridization(p1,p2)

@@ -131,7 +131,7 @@ for model_name, model in Networks.items():
 
         # Concatenate all outputs for original dataset
         final_output_original = tr.cat(all_outputs_original, dim=0)
-
+        print(final_output_transformed.shape,final_output_original.shape)
         # Store outputs and labels in the dictionary
         model_data[dataset_name] = {
             'transformed_outputs': final_output_transformed,

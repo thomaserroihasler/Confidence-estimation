@@ -1,4 +1,7 @@
-from Functions import Bin_edges, kNN, Nearest_lower_and_upper_bound_in_sorted_list
+
+from Confidence_Estimation.Other.Useful_functions.definitions import Bin_edges, kNN, Nearest_lower_and_upper_bound_in_sorted_list
+
+#from Functions import Bin_edges, kNN, Nearest_lower_and_upper_bound_in_sorted_list
 
 import torch as tr
 import torch.nn as nn
