@@ -9,6 +9,13 @@ sys.path[0] = new_path
 
 from Confidence_Estimation.Data.Data_sets.configurations import CONFIG
 
+def filter_classes(dataset, classes_to_include, dataset_name):
+    if dataset_name != 'HAM-10000':
+        indices = [i for i in range(len(dataset)) if dataset.targets[i] in classes_to_include]
+    else:
+        indices = [i for i in range(len(dataset)) if dataset.dataset.labels[i] in classes_to_include]
+    return Subset(dataset, indices)
+
 def fuse_datasets(dataset1, dataset2):
     """ Combine two datasets into a single dataset. """
     # Combine the two datasets into a single list of samples

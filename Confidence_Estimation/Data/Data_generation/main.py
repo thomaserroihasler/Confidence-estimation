@@ -13,52 +13,15 @@ from Confidence_Estimation.Other.Useful_functions.definitions import print_devic
 from Confidence_Estimation.Data.Data_sets.definitions import CustomTransformDataset
 from Confidence_Estimation.Data.Data_sets.functions import load_and_preprocess_data
 from Confidence_Estimation.Data.Data_sets.configurations import CONFIG
-from Confidence_Estimation.Data.Data_visualization.functions import plot_sample_images
 from Confidence_Estimation.Networks_and_predictors.Networks.definitions import SimpleCNN
+from Confidence_Estimation.Configurations.Configurations import *
 
 # Get the device name for PyTorch operations
 device = print_device_name()
 
-# Dataset and Output Configuration
-DATASET_NAME = 'MNIST'
-OUTPUT_LOCATION = '../../../Data/Outputs/' + DATASET_NAME
-NUMBER_OF_CLASSES = None
-
-# Split sizes for non-standard datasets
-SPLIT_SIZES = {
-    "train": 0.6,  # 60% data for training
-    "validation": 0.2,  # 20% data for validation
-    "test": 0.2  # 20% data for testing
-}
-
-from torchvision import transforms
-
-# Define basic transformations
-BASIC_TRANSFORMATIONS = transforms.Compose([
-    transforms.ToTensor()
-])
-
-ADDITIONAL_TRANSFORMATIONS = transforms.Compose([
-    transforms.RandomHorizontalFlip(),  # Randomly flip the image horizontally
-    transforms.RandomVerticalFlip()     # Randomly flip the image vertically
-])
-
-# Combine basic and additional transformations
-# TRANSFORMATIONS = transforms.Compose([
-#     *BASIC_TRANSFORMATIONS.transforms,
-#     *ADDITIONAL_TRANSFORMATIONS
-# ])
-
-# Define minimal ToTensor transformation
-
 # Load datasets with transformations
 _, validation_set, test_set = load_and_preprocess_data(DATASET_NAME,BASIC_TRANSFORMATIONS, SPLIT_SIZES, NUMBER_OF_CLASSES)
-
-# Load datasets with only ToTensor transformation
 _, validation_set_nt, test_set_nt = load_and_preprocess_data(DATASET_NAME, BASIC_TRANSFORMATIONS,SPLIT_SIZES, NUMBER_OF_CLASSES)
-
-# Define batch size
-BATCH_SIZE = 32
 
 # Initialize network
 if NUMBER_OF_CLASSES is None:
@@ -69,11 +32,10 @@ else:
 Networks = {
     'SimpleCNN': network
 }
-
 # Creating DataLoaders for datasets
-N = 2  # Number of transformations per image
-validation_loader = DataLoader(CustomTransformDataset(validation_set, transform=ADDITIONAL_TRANSFORMATIONS, N=N), batch_size=BATCH_SIZE, shuffle=False)
-test_loader = DataLoader(CustomTransformDataset(test_set, transform=ADDITIONAL_TRANSFORMATIONS, N=N), batch_size=BATCH_SIZE, shuffle=False)
+
+validation_loader = DataLoader(CustomTransformDataset(validation_set, transform=ADDITIONAL_TRANSFORMATIONS, N=NUMBER_OF_TRANSFORMATIONS), batch_size=BATCH_SIZE, shuffle=False)
+test_loader = DataLoader(CustomTransformDataset(test_set, transform=ADDITIONAL_TRANSFORMATIONS, N=NUMBER_OF_TRANSFORMATIONS), batch_size=BATCH_SIZE, shuffle=False)
 
 # DataLoaders for the datasets with only ToTensor transformation
 validation_loader_nt = DataLoader(validation_set_nt, batch_size=BATCH_SIZE, shuffle=False)
@@ -131,7 +93,6 @@ for model_name, model in Networks.items():
 
         # Concatenate all outputs for original dataset
         final_output_original = tr.cat(all_outputs_original, dim=0)
-        print(final_output_transformed.shape,final_output_original.shape)
         # Store outputs and labels in the dictionary
         model_data[dataset_name] = {
             'transformed_outputs': final_output_transformed,
