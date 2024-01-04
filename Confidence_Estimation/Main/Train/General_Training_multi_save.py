@@ -86,42 +86,6 @@ DIFFEOMORPHISM_PARAMS = {
     "temperature scale": 1,  # Initialize with desired value for temperature
     "c": 5               # Initialize with desired value for c
 }
-def get_transforms(dataset_name):
-    base_transforms = []
-
-    if dataset_name == 'MNIST':
-        if H_FLIP:
-            base_transforms.append(transforms.RandomHorizontalFlip())
-        if RANDOM_CROP:
-            base_transforms.append(transforms.RandomCrop(28, padding=4))
-        if ROTATION:
-            base_transforms.append(transforms.RandomRotation(ROTATION_DEGREES))
-        base_transforms.extend([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-    elif dataset_name in ['CIFAR-10', 'CIFAR-100']:
-        if H_FLIP:
-            base_transforms.append(transforms.RandomHorizontalFlip())
-        if V_FLIP:
-            base_transforms.append(transforms.RandomVerticalFlip())
-        if RANDOM_CROP:
-            base_transforms.append(transforms.RandomCrop(32, padding=4))
-        if COLOR_JITTER:
-            base_transforms.append(transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1))
-        if ROTATION:
-            base_transforms.append(transforms.RandomRotation(ROTATION_DEGREES))
-        base_transforms.extend(
-            [transforms.ToTensor(), transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])])
-
-    elif dataset_name == 'HAM-10000':
-        base_transforms.extend([transforms.Resize((128, 128))])  # Original rotation for HAM-10000
-        if H_FLIP:
-            base_transforms.append(transforms.RandomHorizontalFlip())
-        if V_FLIP:
-            base_transforms.append(transforms.RandomVerticalFlip())
-        if ROTATION:
-            base_transforms.append(transforms.RandomRotation(ROTATION_DEGREES))
-        base_transforms.extend([transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])])
-
-    return base_transforms
 # Configuration
 CONFIG = {
     'MNIST': {
