@@ -1,6 +1,6 @@
 import torch as tr
 import numpy as np
-from Confidence_Estimation.Configurations.Configurations import*
+from Confidence_Estimation.Configurations.definitions import*
 device = tr.device('cuda:0' if tr.cuda.is_available() else 'cpu')
 
 def load_and_preprocess_data(dataset_name, classes_to_include=None):

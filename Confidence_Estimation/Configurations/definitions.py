@@ -14,7 +14,18 @@ LOSS_FUNCTIONS = {
 }
 
 OPTIMIZERS = {
-    'SGD': optim.SGD(model.parameters(), lr=0.01),
+    'SGD': {
+        'optimizer': optim.SGD,
+        'args': lambda params, lr, momentum, weight_decay: {'lr': lr, 'momentum': momentum, 'weight_decay': weight_decay}
+    },
+    'Adam': {
+        'optimizer': optim.Adam,
+        'args': lambda params, lr, weight_decay: {'lr': lr, 'weight_decay': weight_decay}
+    },
+    'RMSprop': {
+        'optimizer': optim.RMSprop,
+        'args': lambda params, lr, momentum: {'lr': lr, 'momentum': momentum}
+    }
 }
 
 BASIC_TRANSFORMATIONS = transforms.Compose([ transforms.ToTensor()])
@@ -59,7 +70,7 @@ CONFIG = { # Configurations for each dataset
 ### NETWORK ###
 
 NETWORK_NAME = 'VGG'
-MODEL_CONFIG = { # Model Configurations
+MODELS = { # Model Configurations
     'VGG': {
         'model': VGG,
         'args': lambda config, n: ('VGG11', config['input_dim'][0], n, config['input_dim'])
@@ -77,9 +88,12 @@ MODEL_CONFIG = { # Model Configurations
 ### NETWORK TRAINING ###
 
 TRAINING_LOSS_FUNCTION = 'Cross-entropy'
-TRAINING_OPTIMIZER = 'SGD'
 TRAINING_BATCH_SIZE = 32
+
+TRAINING_OPTIMIZER = 'SGD'
 TRAINING_LEARNING_RATE = 0.01
+TRAINING_MOMENTUM = 0.9
+TRAINING_WEIGHT_DECAY = 0.0005
 
 TRAINING_H_FLIP = False
 TRAINING_V_FLIP = False
@@ -91,20 +105,23 @@ TRAINING_USE_MIXUP = False  # Add a flag to turn on or off mixup
 TRAINING_MIXUP_ALPHA = 1.0  # Mixup interpolation coefficient
 TRAINING_USE_DIFFEOMORPHISM = False  # Flag to turn on or off the diffeomorphism transformations
 TRAINING_DIFFEOMORPHISM_DEGREES_OF_FREEDOM = 5
-TRAINING_DIFFEOMORPHISM_PARAMS = {"temperature scale": 1,  "c": 5}
+TRAINING_DIFFEOMORPHISM_TEMPERATURE_SCALE = 1
+TRAINING_DIFFEOMORPHISM_PARAMS = {"temperature scale": TRAINING_DIFFEOMORPHISM_TEMPERATURE_SCALE,  "c": TRAINING_DIFFEOMORPHISM_DEGREES_OF_FREEDOM}
 
 TRAINING_ADDITIONAL_TRANSFORMATIONS = transforms.Compose([transforms.ToTensor()])
+TRAINING_PARALLEL_TRANSFORMATIONS = None
 
-TRAINING_NUMBER_OF_EPOCHS = 100
+TRAINING_NUMBER_OF_EPOCHS = 1
 VALIDATION_ACCURACY_THRESHOLD = 95
 EARLY_STOPPING = False  # Flag to indicate whether early stopping was triggered
 
-## CONFIDENCE ESTIMATORS
+### CONFIDENCE ESTIMATOR VALIDATION ###
 
 VALIDATION_USE_DIFFEOMORPHISM = False  # Flag to turn on or off the diffeomorphism transformations
 VALIDATION_TEMPERATURE_SCALE = 1.0
 VALIDATION_DIFFEOMORPHISM_DEGREES_OF_FREEDOM = 5
-VALIDATION_DIFFEOMORPHISM_PARAMS = {"temperature scale": 1, "c": 5}
+VALIDATION_DIFFEOMORPHISM_TEMPERATURE_SCALE = 1
+VALIDATION_DIFFEOMORPHISM_PARAMS = {"temperature scale": VALIDATION_DIFFEOMORPHISM_TEMPERATURE_SCALE,  "c": VALIDATION_DIFFEOMORPHISM_DEGREES_OF_FREEDOM}
 
 VALIDATION_ADDITIONAL_TRANSFORMATIONS = transforms.Compose([
     transforms.RandomHorizontalFlip(),  # Randomly flip the image horizontally
@@ -116,9 +133,22 @@ VALIDATION_BATCH_SIZE = 32
 
 VALIDATION_LEARNING_RATE = 0.01
 VALIDATION_LOSS_FUNCTION = 'Cross-entropy'
+VALIDATION_NUMBER_OF_EPOCHS = 100
+
+VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_NORMAL = 20
+VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_TRANSFORMED = 20
 
 VALIDATION_DIFFEOMORPHISM_PARAMS = {"temperature scale": 1,"c": 5}
 
+
+### CONFIDENCE ESTIMATORS TEST ###
+
+
+
+
+
 ### FILE LOCATIONS ###
+
 INPUT_LOCATION = '../../../Data/Inputs/' + DATASET_NAME
 OUTPUT_LOCATION = '../../../Data/Outputs/' + DATASET_NAME
+CALIBRATION_LOCATION = '../../../CalibrationMethods/' + DATASET_NAME

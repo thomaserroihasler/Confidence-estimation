@@ -106,7 +106,7 @@ class ECEWithProbabilities(nn.Module):
         # Get the predicted class and confidence from probabilities
         labels = target_pred[:,0]
         predictions = target_pred[:,1]
-        confidences = # probabilities along the direction of prediction
+        confidences = probabilities.gather(1, predictions.unsqueeze(1)).squeeze()
         accuracy = (predictions == labels).float()
 
         # Sort by confidence

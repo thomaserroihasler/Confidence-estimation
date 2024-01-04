@@ -2,8 +2,7 @@ import torch as tr
 import torch.nn.functional as F
 import os
 import sys
-import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import TensorDataset
 
 # Update the system path to include the directory for Confidence Estimation
 new_path = sys.path[0].split("Confidence_Estimation")[0] + "Confidence_Estimation"
@@ -13,13 +12,14 @@ from Confidence_Estimation.Other.Function_approximators.definitions import KNNGa
 from Confidence_Estimation.Other.Confidences.definitions import TemperatureScaledConfidence, AveragetemperatureScaledConfidence
 from Confidence_Estimation.Main.Train.functions import train_model
 from Confidence_Estimation.Other.Measures.definitions import CrossEntropy
+from Confidence_Estimation.Configurations.definitions import*
+from Confidence_Estimation.Configurations.functions import*
 
 # Define parameters
-NUMBER_OF_NEAREST_NEIGHBORS_NORMAL = 20
-NUMBER_OF_NEAREST_NEIGHBORS_TRANSFORMED = 20
-DATASET_NAME = 'MNIST'
-OUTPUT_LOCATION = '../../../Data/Outputs/' + DATASET_NAME
-CALIBRATION_LOCATION = '../../../CalibrationMethods/' + DATASET_NAME
+Number_of_nearest_neighbors_normal = VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_NORMAL
+Number_of_nearest_neighbors_transformed = VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_TRANSFORMED
+Number_of_epochs = VALIDATION_NUMBER_OF_EPOCHS
+Batch_size = VALIDATION_BATCH_SIZE
 
 # Load the model data
 all_model_data = tr.load(OUTPUT_LOCATION + '/all_model_data.pt')
@@ -67,14 +67,14 @@ optimizer_temp = optim.Adam(temp_scaled_model.parameters(), lr=0.001)
 optimizer_avg_temp = optim.Adam(avg_temp_scaled_model.parameters(), lr=0.001)
 
 # Train temperature scaling models
-# Uncomment the following lines to train the models
-temp_scaled_model = train_model(temp_scaled_model, train_dataset_normal, loss_fn, optimizer_temp, epochs=100, batch_size=32)
-avg_temp_scaled_model = train_model(avg_temp_scaled_model, train_dataset_transformed, loss_fn, optimizer_avg_temp, epochs=100, batch_size=32)
-
+optimizer_temp = create_optimizer(TRAINING_OPTIMIZER,TRAINING_LEARNING_RATE,TRAINING_MOMENTUM,TRAINING_WEIGHT_DECAY)
+optimizer_avg_temp = create_optimizer(TRAINING_OPTIMIZER,TRAINING_LEARNING_RATE,TRAINING_MOMENTUM,TRAINING_WEIGHT_DECAY)
+temp_scaled_model = train_model(temp_scaled_model, train_dataset_normal, loss_fn, optimizer_temp, epochs=Number_of_epochs, batch_size=Batch_size)
+avg_temp_scaled_model = train_model(avg_temp_scaled_model, train_dataset_transformed, loss_fn, optimizer_avg_temp,  epochs=Number_of_epochs, batch_size=Batch_size)
 
 # Initialize KNNGaussianKernel for normal and transformed outputs with prediction validity
-gaussian_kernel_normal = KNNGaussianKernel(softmax_normal_outputs, prediction_validity, NUMBER_OF_NEAREST_NEIGHBORS_NORMAL)
-gaussian_kernel_transformed = KNNGaussianKernel(softmax_mean_transformed_outputs, prediction_validity, NUMBER_OF_NEAREST_NEIGHBORS_TRANSFORMED)
+gaussian_kernel_normal = KNNGaussianKernel(softmax_normal_outputs, prediction_validity, Number_of_nearest_neighbors_normal)
+gaussian_kernel_transformed = KNNGaussianKernel(softmax_mean_transformed_outputs, prediction_validity, Number_of_nearest_neighbors_transformed)
 
 # Save the trained temperature scaling models and Gaussian Kernels
 if not os.path.exists(CALIBRATION_LOCATION):

@@ -1,10 +1,11 @@
 import torch as tr
 import sys
 from torch.utils.data import DataLoader
+
 from Confidence_Estimation.Networks_and_predictors.Networks.functions import  get_accuracy
 from Confidence_Estimation.Data.Data_transformations.definitions import  DynamicDiffeomorphism
 from Confidence_Estimation.Data.Data_processing.functions import load_and_preprocess_data
-from Confidence_Estimation.Configurations.Configurations import *
+from Confidence_Estimation.Configurations.definitions import *
 from Confidence_Estimation.Other.Useful_functions.definitions import print_device_name
 
 # Update the system path to include the directory for Confidence Estimation
@@ -91,6 +92,6 @@ with tr.no_grad():
     print(f'Accuracy of the model on the test images: {100 * correct / total}%')
 
 # Save Model
-save_path = f'./Networks/{MODEL_NAME.lower()}_{DATASET_NAME.lower()}.pth'
+save_path = f'./Networks/{NETWORK_NAME.lower()}_{DATASET_NAME.lower()}.pth'
 print('Network saved location is', save_path)
 tr.save(model.state_dict(), save_path)

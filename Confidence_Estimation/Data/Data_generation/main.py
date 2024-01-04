@@ -1,7 +1,7 @@
 import torch as tr
 import os
 import sys
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 from torchvision import transforms
 
 # Update the system path to include the directory for Confidence Estimation
@@ -12,9 +12,7 @@ sys.path[0] = new_path
 from Confidence_Estimation.Other.Useful_functions.definitions import print_device_name
 from Confidence_Estimation.Data.Data_sets.definitions import CustomTransformDataset
 from Confidence_Estimation.Data.Data_sets.functions import load_and_preprocess_data
-from Confidence_Estimation.Data.Data_sets.configurations import CONFIG
-from Confidence_Estimation.Networks_and_predictors.Networks.definitions import SimpleCNN
-from Confidence_Estimation.Configurations.Configurations import *
+from Confidence_Estimation.Configurations.definitions import *
 
 # Get the device name for PyTorch operations
 device = print_device_name()
