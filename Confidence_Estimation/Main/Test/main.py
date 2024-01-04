@@ -2,20 +2,13 @@ import torch as tr
 import os
 import sys
 import torch.nn.functional as F
-import numpy as np
 
 # Update the system path to include the directory for Confidence Estimation
 new_path = sys.path[0].split("Confidence_Estimation")[0] + "Confidence_Estimation"
 sys.path[0] = new_path
 
 from Confidence_Estimation.Other.Measures.definitions import AURC, ECE, MIE
-
-# Define the path where the kernels are saved
-NUMBER_OF_NEAREST_NEIGHBORS_NORMAL = 50
-NUMBER_OF_NEAREST_NEIGHBORS_TRANSFORMED = 50
-DATASET_NAME = 'MNIST'
-OUTPUT_LOCATION = '../../../Data/Outputs/' + DATASET_NAME
-KERNEL_LOCATION = '../../../Kernels/' + DATASET_NAME
+from Confidence_Estimation.Configurations.definitions import *
 
 # Load the model data
 all_model_data = tr.load(OUTPUT_LOCATION + '/all_model_data.pt')
@@ -51,10 +44,9 @@ selected_mean_softmax_transformed_outputs = mean_softmax_transformed_outputs[tr.
 # Similarly, select the corresponding maximum values from the normal outputs
 selected_softmax_normal_outputs = softmax_normal_outputs[tr.arange(softmax_normal_outputs.size(0)), max_indices_normal]
 
-
 # Load the Gaussian Kernels
-kernel_normal = tr.load(os.path.join(KERNEL_LOCATION, 'gaussian_kernel_normal.pt'))
-kernel_transformed = tr.load(os.path.join(KERNEL_LOCATION, 'gaussian_kernel_transformed.pt'))
+kernel_normal = tr.load(os.path.join(CALIBRATION_LOCATION, 'gaussian_kernel_normal.pt'))
+kernel_transformed = tr.load(os.path.join(CALIBRATION_LOCATION, 'gaussian_kernel_transformed.pt'))
 
 # Apply the kernels to the test data
 test_scores_normal = kernel_normal(selected_softmax_normal_outputs).squeeze()
