@@ -9,6 +9,9 @@ sys.path[0] = new_path
 
 from Confidence_Estimation.Data.Data_sets.configurations import CONFIG
 from Confidence_Estimation.Data.Data_sets.definitions import*
+from Confidence_Estimation.Other.Useful_functions.definitions import get_device
+
+device = get_device()
 
 def filter_classes(dataset, classes_to_include, dataset_name):
     if dataset_name != 'HAM-10000':

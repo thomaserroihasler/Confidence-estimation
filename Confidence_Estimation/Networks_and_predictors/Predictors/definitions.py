@@ -39,4 +39,3 @@ class MaximalLogitPredictor(Predictor):
         probabilities = F.softmax(input, dim=-1)
         score , prediction = tr.max(probabilities, dim=-1)
         return prediction, score
-

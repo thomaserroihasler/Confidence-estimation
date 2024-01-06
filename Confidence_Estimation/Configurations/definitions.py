@@ -15,9 +15,9 @@ from Confidence_Estimation.Data.Data_sets.functions import Normalization
 ### META VARIABLES ###
 
 LOSS_FUNCTIONS = {
-    'label_smoothed_crossentropy': LabelSmoothedCrossEntropyLoss(epsilon=0.1),
-    'cross_entropy': CrossEntropyLoss(),
-    'mse': MSELoss()  # Not typically used for classification
+    'Label_smoothed_cross-entropy': LabelSmoothedCrossEntropyLoss(epsilon=0.1),
+    'Cross-entropy': CrossEntropyLoss(),
+    'MSE': MSELoss()  # Not typically used for classification
 }
 
 OPTIMIZERS = {
@@ -75,7 +75,8 @@ CONFIG = { # Configurations for each dataset
 }
 ### NETWORK ###
 
-NETWORK_NAME = 'VGG'
+NETWORK_NAME = 'SimpleCNN'
+NETWORK_SAVE = 'save.pth'
 MODELS = { # Model Configurations
     'VGG': {
         'model': VGG,
@@ -92,7 +93,7 @@ MODELS = { # Model Configurations
 }
 
 ### NETWORK TRAINING ###
-TRAINING_NUMBER_OF_EPOCHS = 1
+TRAINING_NUMBER_OF_EPOCHS = 5
 
 TRAINING_LOSS_FUNCTION = 'Cross-entropy'
 TRAINING_BATCH_SIZE = 32
@@ -136,23 +137,34 @@ GENERATION_OUTPUT_DIFFEOMORPHISM_DEGREES_OF_FREEDOM = 5
 GENERATION_OUTPUT_DIFFEOMORPHISM_TEMPERATURE_SCALE = 1
 GENERATION_OUTPUT_DIFFEOMORPHISM_PARAMS = {"temperature scale": GENERATION_OUTPUT_DIFFEOMORPHISM_TEMPERATURE_SCALE,  "c": GENERATION_OUTPUT_DIFFEOMORPHISM_DEGREES_OF_FREEDOM}
 
-GENERATION_OUTPUT_ADDITIONAL_TRANSFORMATIONS = transforms.Compose([transforms.ToTensor()])
+#GENERATION_OUTPUT_ADDITIONAL_TRANSFORMATIONS = transforms.Compose([transforms.ToTensor()])
 GENERATION_OUTPUT_PARALLEL_TRANSFORMATIONS = None
+GENERATION_OUTPUT_ADDITIONAL_TRANSFORMATIONS = None
 
 GENERATION_OUTPUT_ADDITIONAL_TRANSFORMATIONS = transforms.Compose([
-    transforms.RandomHorizontalFlip(),  # Randomly flip the image horizontally
-    transforms.RandomVerticalFlip()     # Randomly flip the image vertically
+    transforms.RandomRotation(10),  # Randomly rotate the image by +/- 10 degrees
 ])
+
 GENERATION_OUTPUT_NUMBER_OF_TRANSFORMATIONS = 2
 GENERATION_OUTPUT_BATCH_SIZE = 32
+OUTPUT_SAVE = 'all_model_data.pth'
+
 ### CONFIDENCE ESTIMATOR VALIDATION
 
 VALIDATION_NUMBER_OF_TRANSFORMATIONS = 2
+VALIDATION_NUMBER_OF_EPOCHS = 25
+
+VALIDATION_LOSS_FUNCTION = 'Cross-entropy'
 VALIDATION_BATCH_SIZE = 32
 
+VALIDATION_OPTIMIZER = 'SGD'
 VALIDATION_LEARNING_RATE = 0.01
-VALIDATION_LOSS_FUNCTION = 'Cross-entropy'
-VALIDATION_NUMBER_OF_EPOCHS = 100
+VALIDATION_MOMENTUM = 0.9
+VALIDATION_WEIGHT_DECAY = 0.0005
+
+TEST_ACCURACY_THRESHOLD = 95
+EARLY_STOPPING = False  # Flag to indicate whether early stopping was triggered
+
 
 VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_NORMAL = 20
 VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_TRANSFORMED = 20
@@ -167,12 +179,17 @@ TEST_LEARNING_RATE = 0.01
 TEST_LOSS_FUNCTION = 'Cross-entropy'
 TEST_NUMBER_OF_EPOCHS = 100
 
-TEST_NUMBER_OF_NEAREST_NEIGHBORS_NORMAL = 20
-TEST_NUMBER_OF_NEAREST_NEIGHBORS_TRANSFORMED = 20
+TEST_NUMBER_OF_NEAREST_NEIGHBORS_NORMAL = 100
+TEST_NUMBER_OF_NEAREST_NEIGHBORS_TRANSFORMED = 100
 
-### FILE LOCATIONS ###
+### FOLDER LOCATIONS ###
 
-INPUT_LOCATION = '../../../Data/Inputs/' + DATASET_NAME
-OUTPUT_LOCATION = '../../../Data/Outputs/' + DATASET_NAME
-NETWORK_LOCATION =  '../../../Networks/' + NETWORK_NAME
-CALIBRATION_LOCATION = '../../../CalibrationMethods/' + DATASET_NAME
+INPUT_LOCATION = '../../../Data/Inputs/'+DATASET_NAME+'/'+NETWORK_NAME
+OUTPUT_LOCATION = '../../../Data/Outputs/'+DATASET_NAME+'/'+NETWORK_NAME
+NETWORK_LOCATION =  '../../../Networks/'+DATASET_NAME+'/'+NETWORK_NAME
+CALIBRATION_LOCATION = '../../../CalibrationMethods/'+DATASET_NAME+'/'+NETWORK_NAME
+
+### FILE PATHS ###
+INPUT_FILE_PATH  = INPUT_LOCATION
+OUTPUT_FILE_PATH  = OUTPUT_LOCATION +'/'+ OUTPUT_SAVE
+NETWORK_FILE_PATH = NETWORK_LOCATION+'/' + NETWORK_SAVE

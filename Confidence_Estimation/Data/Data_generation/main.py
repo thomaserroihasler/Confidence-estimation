@@ -10,8 +10,10 @@ sys.path[0] = new_path
 # Import necessary modules from Confidence Estimation
 from Confidence_Estimation.Other.Useful_functions.definitions import print_device_name
 from Confidence_Estimation.Data.Data_sets.functions import load_and_preprocess_data
+from Confidence_Estimation.Data.Data_visualization.functions import plot_sample_images
 from Confidence_Estimation.Configurations.definitions import *
 from Confidence_Estimation.Configurations.functions import *
+from Confidence_Estimation.Other.Useful_functions.definitions import verify_and_create_folder
 
 # Get the device name for PyTorch operations
 device = print_device_name()
@@ -24,11 +26,12 @@ classes_to_include = Classes_to_consider(NUMBER_OF_CLASSES)               # List
 dataset_config = CONFIG[DATASET_NAME]                                     # Configuration settings for the dataset
 dataset_name = DATASET_NAME                                               # Name of the dataset
 model_config = MODELS[NETWORK_NAME]                                       # Configuration settings for the model
-network_location = NETWORK_LOCATION                                       # Location for saving/loading the network model
+network_file_path = NETWORK_FILE_PATH                                     # Location for saving/loading the network model
 network_name = NETWORK_NAME                                               # Name of the network (model)
 number_of_classes = NUMBER_OF_CLASSES                                     # Number of classes in the dataset
 number_of_transformations = GENERATION_OUTPUT_NUMBER_OF_TRANSFORMATIONS   # Number of transformations for data generation output
 output_location = OUTPUT_LOCATION                                         # Location for saving the model output
+output_file_path = OUTPUT_FILE_PATH                                       # Save location for the output
 split_sizes = SPLIT_SIZES                                                 # Split proportions for train, validation, test sets
 
 # Load datasets with transformations
@@ -39,8 +42,12 @@ _, validation_set_nt, test_set_nt = load_and_preprocess_data(dataset_name,basic_
 input_shape = (1, *dataset_config['input_dim'])  # Prepends batch size of 1
 
 # Initialize the model with the specified configuration and move it to the appropriate device (GPU/CPU)
+if number_of_classes == None:
+    number_of_classes = len(dataset_config['classes'])
+
+# Initialize the model with the specified configuration and move it to the appropriate device (GPU/CPU)
 model = model_config['model'](*model_config['args'](dataset_config, number_of_classes)).to(device)
-model.load_state_dict(tr.load(network_location))
+model.load_state_dict(tr.load(network_file_path))
 
 # Creating DataLoaders for datasets
 validation_loader = DataLoader(CustomTransformDataset(validation_set, transform=additional_transformations, N=number_of_transformations), batch_size=batch_size, shuffle=False)
@@ -50,9 +57,7 @@ test_loader = DataLoader(CustomTransformDataset(test_set, transform=additional_t
 validation_loader_nt = DataLoader(validation_set_nt, batch_size=batch_size, shuffle=False)
 test_loader_nt = DataLoader(test_set_nt, batch_size=batch_size, shuffle=False)
 
-# Ensure the 'Data' directory exists before saving data
-if not os.path.exists(output_location):
-    os.makedirs(output_location)
+verify_and_create_folder(output_location)
 
 # Dictionary to store model outputs and labels
 all_model_data = {}
@@ -69,12 +74,17 @@ for dataset_name, loader, loader_nt in [('validation', validation_loader, valida
     all_labels = []
 
     # Process dataset with N transformations
-    for inputs, labels in loader:
+    total_batches = len(loader)
+    for batch_num, (inputs, labels) in enumerate(loader):
+        if batch_num % 50 == 0:
+            print(f"Processing {dataset_name} set, batch {batch_num + 1}/{total_batches}...")
         # Reshape inputs if they have an extra dimension for transformations
         if inputs.dim() == 5:  # Assuming shape [batch_size, N, channels, height, width]
             batch_size, N, C, H, W = inputs.size()
             inputs = inputs.view(-1, C, H, W)  # Merge batch and N dimensions
-
+            # repeat the labels N times
+            # repeated_labels = labels.repeat_interleave(N)
+            # plot_sample_images(inputs,repeated_labels,'transformed')
         inputs = inputs.to(device)
         labels = labels.to(device)  # No need to repeat labels
 
@@ -110,4 +120,5 @@ for dataset_name, loader, loader_nt in [('validation', validation_loader, valida
 all_model_data[network_name] = model_data
 
 # Save the entire dictionary of model data
-tr.save(all_model_data, output_location + '/all_model_data.pt')
+print('Model outputs data saved location is ', output_file_path)
+tr.save(all_model_data, output_file_path)

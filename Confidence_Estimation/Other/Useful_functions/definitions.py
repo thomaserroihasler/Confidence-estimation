@@ -3,13 +3,35 @@ import torch as tr
 import matplotlib.pyplot as plt
 from PIL import Image
 import math as mt
+import os
 
+def verify_and_create_folder(folder_path):
+    """
+    Verifies if a folder exists at the specified path. If it does not exist, creates it.
+
+    Args:
+        folder_path (str): The path of the folder to verify and potentially create.
+    """
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+        print(f"Folder '{folder_path}' created.")
+    else:
+        print(f"Folder '{folder_path}' already exists.")
 
 def print_device_name():
+    """
+    Prints the name of the device being used (CPU or CUDA) and returns it.
+    """
     device = tr.device('cuda:0' if tr.cuda.is_available() else 'cpu')
     print('the current device is', device)
     return device
 
+def get_device():
+    """
+    Returns the current device (CPU or CUDA) used by PyTorch.
+    """
+    device = tr.device('cuda:0' if tr.cuda.is_available() else 'cpu')
+    return device
 
 def handle_nan(arr):
     """
