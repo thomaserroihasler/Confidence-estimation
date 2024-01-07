@@ -46,7 +46,7 @@ split_sizes = SPLIT_SIZES                                         # Split propor
 weight_decay = TRAINING_WEIGHT_DECAY                              # Weight decay factor for the optimizer
 
 # Load and preprocess the datasets (training, validation, testing) based on the specified dataset name and classes
-train_dataset, val_dataset, test_dataset = load_and_preprocess_data(dataset_name,additional_transformations,split_sizes,classes_to_include)
+train_dataset, val_dataset, test_dataset = load_and_preprocess_data(dataset_name,basic_transformations,split_sizes,classes_to_include)
 
 # Create data loaders for each dataset with the specified batch size and shuffle settings
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -65,9 +65,9 @@ model = model_config['model'](*model_config['args'](dataset_config, number_of_cl
 # Train the model using the specified parameters and datasets
 optimizer = create_optimizer(optimizer,model.parameters(), learning_rate, momentum, weight_decay)  # Optimizer for training
 
-model = train_model(model,train_loader,criterion,optimizer,parallel_transformations,10,val_loader,None)
+model = train_model(model,train_loader,criterion,optimizer,parallel_transformations,1,val_loader,None)
 
-test_cross_entropy = test_model(model, test_loader, criterion, max_logit_predictor, prediction_criterion, batch_size)
+test_cross_entropy, accuracy = test_model(model, test_loader, criterion, max_logit_predictor, prediction_criterion, batch_size)
 # generate the appropriate folder
 verify_and_create_folder(network_location)
 

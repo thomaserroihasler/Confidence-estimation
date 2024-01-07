@@ -10,10 +10,14 @@ sys.path[0] = new_path
 # Import necessary modules from Confidence Estimation
 from Confidence_Estimation.Other.Useful_functions.definitions import print_device_name
 from Confidence_Estimation.Data.Data_sets.functions import load_and_preprocess_data
-from Confidence_Estimation.Data.Data_visualization.functions import plot_sample_images
+from Confidence_Estimation.Data.Data_visualization.functions import plot_sample_images, plot_images_from_loader
 from Confidence_Estimation.Configurations.definitions import *
 from Confidence_Estimation.Configurations.functions import *
 from Confidence_Estimation.Other.Useful_functions.definitions import verify_and_create_folder
+from Confidence_Estimation.Main.Test.functions import test_model
+from Confidence_Estimation.Other.Measures.definitions import TrueFalseMeasure
+from Confidence_Estimation.Networks_and_predictors.Predictors.definitions import MaximalLogitPredictor
+from Confidence_Estimation.Data.Data_visualization.functions import plot_sample_images
 
 # Get the device name for PyTorch operations
 device = print_device_name()
@@ -34,9 +38,12 @@ output_location = OUTPUT_LOCATION                                         # Loca
 output_file_path = OUTPUT_FILE_PATH                                       # Save location for the output
 split_sizes = SPLIT_SIZES                                                 # Split proportions for train, validation, test sets
 
+criterion = LOSS_FUNCTIONS[TRAINING_LOSS_FUNCTION]                # Loss function to be used during training
+max_logit_predictor = MaximalLogitPredictor()                     # prediction of the network
+prediction_criterion = TrueFalseMeasure()                         # measure for the prediction of the network (accuracy)
+
 # Load datasets with transformations
 _, validation_set, test_set = load_and_preprocess_data(dataset_name,basic_transformations, split_sizes, classes_to_include)
-_, validation_set_nt, test_set_nt = load_and_preprocess_data(dataset_name,basic_transformations, split_sizes, classes_to_include)
 
 # Define the input shape for the model, including batch size
 input_shape = (1, *dataset_config['input_dim'])  # Prepends batch size of 1
@@ -54,8 +61,10 @@ validation_loader = DataLoader(CustomTransformDataset(validation_set, transform=
 test_loader = DataLoader(CustomTransformDataset(test_set, transform=additional_transformations, N=number_of_transformations), batch_size=batch_size, shuffle=False)
 
 # DataLoaders for the datasets with only ToTensor transformation
-validation_loader_nt = DataLoader(validation_set_nt, batch_size=batch_size, shuffle=False)
-test_loader_nt = DataLoader(test_set_nt, batch_size=batch_size, shuffle=False)
+validation_loader_nt = DataLoader(validation_set, batch_size=batch_size, shuffle=False)
+test_loader_nt = DataLoader(test_set, batch_size=batch_size, shuffle=False)
+
+test_cross_entropy, accuracy = test_model(model, validation_loader_nt, criterion, max_logit_predictor, prediction_criterion, batch_size)
 
 verify_and_create_folder(output_location)
 
@@ -122,3 +131,6 @@ all_model_data[network_name] = model_data
 # Save the entire dictionary of model data
 print('Model outputs data saved location is ', output_file_path)
 tr.save(all_model_data, output_file_path)
+
+
+

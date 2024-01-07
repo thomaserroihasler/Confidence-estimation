@@ -17,6 +17,7 @@ from Confidence_Estimation.Other.Measures.definitions import*
 from Confidence_Estimation.Configurations.definitions import*
 from Confidence_Estimation.Configurations.functions import*
 from Confidence_Estimation.Other.Useful_functions.definitions import print_device_name, verify_and_create_folder
+from Confidence_Estimation.Data.Data_visualization.definitions import *
 
 # Print and return the name of the device (GPU/CPU) being used
 device = print_device_name()
@@ -132,6 +133,10 @@ plt.show()
 # Apply the kernels to the test data
 test_scores_normal = kernel_normal(selected_softmax_normal_outputs).squeeze()
 test_scores_transformed = kernel_transformed(selected_mean_softmax_transformed_outputs).squeeze()
+
+
+plot_reliability_diagram(test_scores_normal,prediction_validity)
+plot_reliability_diagram(test_scores_transformed,prediction_validity)
 
 # Calculate performance metrics for normal kernel
 ece_normal = ECE()(test_scores_normal, prediction_validity)

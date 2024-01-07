@@ -16,7 +16,7 @@ from Confidence_Estimation.Other.Measures.definitions import CrossEntropy
 from Confidence_Estimation.Configurations.definitions import*
 from Confidence_Estimation.Configurations.functions import*
 from Confidence_Estimation.Other.Useful_functions.definitions import print_device_name, verify_and_create_folder
-
+from Confidence_Estimation.Data.Data_visualization.functions import *
 # Print and return the name of the device (GPU/CPU) being used
 device = print_device_name()
 
@@ -73,7 +73,6 @@ naive_confidence, max_indices_normal = tr.max(softmax_normal_outputs, dim=-1)
 
 # Compute the validity of each prediction
 prediction_validity = (max_indices_normal == labels).int()
-
 # Compute the mean confidence for the transformed outputs along the direction of max_indices_normal
 transformed_mean_confidence = softmax_mean_transformed_outputs[tr.arange(softmax_mean_transformed_outputs.size(0)), max_indices_normal]
 
@@ -94,9 +93,8 @@ optimizer_avg_temp = optim.Adam(avg_temp_scaled_model.parameters(), lr=0.001)
 
 # Train temperature scaling models
 
-temp_scaled_model = train_model(temp_scaled_model, validation_loader_normal, loss_fn, optimizer_temp,None, number_of_epochs, None, None)
-avg_temp_scaled_model = train_model(avg_temp_scaled_model, validation_loader_transformed, loss_fn, optimizer_avg_temp,None, number_of_epochs, None, None)
-
+# temp_scaled_model = train_model(temp_scaled_model, validation_loader_normal, loss_fn, optimizer_temp,None, number_of_epochs, None, None)
+# avg_temp_scaled_model = train_model(avg_temp_scaled_model, validation_loader_transformed, loss_fn, optimizer_avg_temp,None, number_of_epochs, None, None)
 
 # Initialize KNNGaussianKernel for normal and transformed outputs with prediction validity
 gaussian_kernel_normal = KNNGaussianKernel(naive_confidence, prediction_validity, Number_of_nearest_neighbors_normal)

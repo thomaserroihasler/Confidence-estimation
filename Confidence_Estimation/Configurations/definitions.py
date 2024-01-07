@@ -73,6 +73,7 @@ CONFIG = { # Configurations for each dataset
         'classes': list(range(100))
     },
 }
+
 ### NETWORK ###
 
 NETWORK_NAME = 'SimpleCNN'
@@ -145,7 +146,7 @@ GENERATION_OUTPUT_ADDITIONAL_TRANSFORMATIONS = transforms.Compose([
     transforms.RandomRotation(10),  # Randomly rotate the image by +/- 10 degrees
 ])
 
-GENERATION_OUTPUT_NUMBER_OF_TRANSFORMATIONS = 2
+GENERATION_OUTPUT_NUMBER_OF_TRANSFORMATIONS = 3
 GENERATION_OUTPUT_BATCH_SIZE = 32
 OUTPUT_SAVE = 'all_model_data.pth'
 

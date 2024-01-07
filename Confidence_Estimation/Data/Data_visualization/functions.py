@@ -40,3 +40,19 @@ def plot_sample_images(images, labels, title, n=5):
 
     # Display the plot
     plt.show()
+
+
+def plot_images_from_loader(loader, title, n=5):
+    # Get the first batch of images and labels
+    images, labels = next(iter(loader))
+
+    # In case of transformed dataset, reshape the images
+    if images.dim() == 5:  # Assuming shape [batch_size, N, channels, height, width]
+        batch_size, N, C, H, W = images.size()
+        images = images.view(-1, C, H, W)  # Merge batch and N dimensions
+        labels = labels.repeat_interleave(N)  # Repeat labels N times for each transformed image
+
+    # Plot the images
+    plot_sample_images(images, labels, title, n=n)
+
+# reliability diagram
