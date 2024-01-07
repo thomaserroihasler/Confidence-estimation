@@ -40,7 +40,18 @@ def handle_nan(arr):
     return np.nan_to_num(arr, nan=0)
 
 
+def handle_nan_torch(tensor):
+    """
+    Replace NaN values in a PyTorch tensor with zeros.
 
+    Args:
+        tensor (tr.Tensor): A PyTorch tensor.
+
+    Returns:
+        tr.Tensor: A tensor with NaN values replaced by zeros.
+    """
+    tensor[tr.isnan(tensor)] = 0
+    return tensor
 
 def Bin_edges(data, num_bins=None, num_per_bin=5):
     """ Bin data into a specified number of bins. """

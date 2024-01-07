@@ -6,7 +6,7 @@ from sklearn.metrics import auc
 
 new_path =  sys.path[0].split("Confidence_Estimation")[0] + "Confidence_Estimation"
 sys.path[0] = new_path
-from Confidence_Estimation.Other.Useful_functions.definitions import handle_nan, Bin_edges, Single_bit_entropy_func
+from Confidence_Estimation.Other.Useful_functions.definitions import*
 
 class TrueFalseMeasure(nn.Module):
     """
@@ -66,7 +66,7 @@ class ECE(nn.Module):
     """
     ECE class: calculates Expected Calibration Error (ECE) using defined bin edges.
     """
-    def __init__(self, num_bins=None, num_per_bin=5):
+    def __init__(self, num_bins=None, num_per_bin=50):
         super(ECE, self).__init__()
         self.num_bins = num_bins
         self.num_per_bin = num_per_bin
@@ -79,10 +79,10 @@ class ECE(nn.Module):
         self.bin_edges = Bin_edges(confidence, self.num_bins, self.num_per_bin)
         # Compute bin sizes, confidences, and accuracies
         bin_sizes, bin_confidences, bin_accuracies = self.calculate_bins(confidence, accuracy)
-
+        bin_accuracies = handle_nan_torch(bin_accuracies)
+        bin_confidences = handle_nan_torch(bin_confidences)
         # Calculate ECE loss
         ece_loss = ((bin_sizes.float() / len(confidence)) * tr.abs(bin_accuracies - bin_confidences)).sum()
-
         return ece_loss
 
     def calculate_bins(self, confidence, accuracy):
@@ -97,7 +97,7 @@ class ECEWithProbabilities(nn.Module):
     """
     ECEWithProbabilities class: calculates Expected Calibration Error (ECE) using probabilities and actual predictions.
     """
-    def __init__(self, num_bins=None, num_per_bin=5):
+    def __init__(self, num_bins=None, num_per_bin=10):
         super(ECEWithProbabilities, self).__init__()
         self.num_bins = num_bins
         self.num_per_bin = num_per_bin
@@ -119,7 +119,8 @@ class ECEWithProbabilities(nn.Module):
 
         # Compute bin sizes, confidences, and accuracies
         bin_sizes, bin_confidences, bin_accuracies = self._calculate_bins(confidences, accuracy)
-
+        bin_accuracies = handle_nan_torch(bin_accuracies)
+        bin_confidences = handle_nan_torch(bin_confidences)
         # Calculate ECE loss
         ece_loss = ((bin_sizes.float() / len(confidences)) * tr.abs(bin_accuracies - bin_confidences)).sum()
 
@@ -140,12 +141,11 @@ class ECEWithProbabilities(nn.Module):
         return bin_sizes, bin_confidences, bin_accuracies
 
 
-
 class MIE(nn.Module):
     """
     MIE class: calculates Expected Calibration Error (ECE) using defined bin edges.
     """
-    def __init__(self, num_bins=None, num_per_bin=5):
+    def __init__(self, num_bins=None, num_per_bin=50):
         super(MIE, self).__init__()
         self.num_bins = num_bins
         self.num_per_bin = num_per_bin
@@ -157,7 +157,8 @@ class MIE(nn.Module):
         self.bin_edges = Bin_edges(confidence, self.num_bins, self.num_per_bin)
         # Compute bin sizes, confidences, and accuracies
         bin_sizes, bin_confidences, bin_accuracies = self.calculate_bins(confidence, accuracy)
-
+        print(bin_sizes)
+        bin_accuracies = handle_nan_torch(bin_accuracies)
         # Calculate ECE loss
         mie_loss = ((bin_sizes.float() / len(confidence)) * Single_bit_entropy_func(bin_accuracies)).sum()
 
@@ -169,8 +170,6 @@ class MIE(nn.Module):
         bin_confidences = tr.Tensor([confidence[(confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])].mean().item() for i in range(len(self.bin_edges)-1)])
         bin_accuracies = tr.Tensor([accuracy[(confidence > self.bin_edges[i]) & (confidence <= self.bin_edges[i+1])].float().mean().item() for i in range(len(self.bin_edges)-1)])
         return bin_sizes, bin_confidences, bin_accuracies
-
-
 
 
 def AUROC(confidence_scores, accuracies):
@@ -234,19 +233,9 @@ def AURC(confidence_scores, accuracies):
 
 def Brier_score(forecast_probabilities, actual_outcomes):
     """
-    Calculate the Brier score for probabilistic forecasts.
-
-    Args:
-        forecast_probabilities: Probabilities forecast by the model.
-        actual_outcomes: Actual outcomes (0 or 1).
-
-    Returns:
-        Brier score value.
+    Calculate the Brier score for probabilistic forecasts using PyTorch.
     """
-    forecast_probabilities_np = np.asarray(forecast_probabilities)
-    actual_outcomes_np = np.asarray(actual_outcomes)
-    brier_score = np.mean((forecast_probabilities_np - actual_outcomes_np) ** 2)
-    return brier_score
+    return tr.mean((forecast_probabilities - actual_outcomes) ** 2)
 
 class MSELossModule(nn.Module):
     """

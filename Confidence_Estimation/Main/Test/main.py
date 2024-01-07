@@ -1,4 +1,3 @@
-import numpy as np
 import matplotlib.pyplot as plt
 import torch as tr
 import torch.nn.functional as F
@@ -16,8 +15,8 @@ from Confidence_Estimation.Other.Confidences.definitions import TemperatureScale
 from Confidence_Estimation.Other.Measures.definitions import*
 from Confidence_Estimation.Configurations.definitions import*
 from Confidence_Estimation.Configurations.functions import*
-from Confidence_Estimation.Other.Useful_functions.definitions import print_device_name, verify_and_create_folder
-from Confidence_Estimation.Data.Data_visualization.definitions import *
+from Confidence_Estimation.Other.Useful_functions.definitions import*
+from Confidence_Estimation.Data.Data_visualization.functions import*
 
 # Print and return the name of the device (GPU/CPU) being used
 device = print_device_name()
@@ -43,6 +42,7 @@ split_sizes = SPLIT_SIZES                                         # Split propor
 weight_decay = VALIDATION_WEIGHT_DECAY                            # Weight decay factor for the optimizer
 Number_of_nearest_neighbors_normal= VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_NORMAL
 Number_of_nearest_neighbors_transformed = VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_TRANSFORMED
+
 # Load the model data
 all_model_data = tr.load(output_file_path)
 
@@ -58,7 +58,7 @@ normal_outputs = test_data['original_outputs']
 # Labels
 labels = test_data['labels']
 # Load the model data
-
+#
 # Apply softmax to the transformed outputs along the last dimension
 softmax_transformed_outputs = F.softmax(transformed_outputs, dim=-1)
 
@@ -77,28 +77,28 @@ prediction_validity = (max_indices_normal == labels).int()
 selected_mean_softmax_transformed_outputs = mean_softmax_transformed_outputs[tr.arange(mean_softmax_transformed_outputs.size(0)), max_indices_normal]
 # Similarly, select the corresponding maximum values from the normal outputs
 selected_softmax_normal_outputs = softmax_normal_outputs[tr.arange(softmax_normal_outputs.size(0)), max_indices_normal]
-
-# plot on the x axis the selected outputs and the validity of prediction as a y axis
-plt.figure(figsize=(12, 6))
-
-# Plot for normal outputs
-plt.subplot(1, 2, 1)
-plt.scatter(selected_softmax_normal_outputs.numpy(), prediction_validity.numpy(), alpha=0.5)
-plt.title('Prediction Validity vs Selected Normal Outputs')
-plt.xlabel('Selected Output Confidence Scores')
-plt.ylabel('Prediction Validity (1 = Correct, 0 = Incorrect)')
-plt.grid(True)
-
-# Plot for transformed outputs
-plt.subplot(1, 2, 2)
-plt.scatter(selected_mean_softmax_transformed_outputs.numpy(), prediction_validity.numpy(), alpha=0.5)
-plt.title('Prediction Validity vs Selected Transformed Outputs')
-plt.xlabel('Selected Output Confidence Scores')
-plt.ylabel('Prediction Validity (1 = Correct, 0 = Incorrect)')
-plt.grid(True)
-
-plt.tight_layout()
-plt.show()
+#
+# # plot on the x axis the selected outputs and the validity of prediction as a y axis
+# plt.figure(figsize=(12, 6))
+#
+# # Plot for normal outputs
+# plt.subplot(1, 2, 1)
+# plt.scatter(selected_softmax_normal_outputs.numpy(), prediction_validity.numpy(), alpha=0.5)
+# plt.title('Prediction Validity vs Selected Normal Outputs')
+# plt.xlabel('Selected Output Confidence Scores')
+# plt.ylabel('Prediction Validity (1 = Correct, 0 = Incorrect)')
+# plt.grid(True)
+#
+# # Plot for transformed outputs
+# plt.subplot(1, 2, 2)
+# plt.scatter(selected_mean_softmax_transformed_outputs.numpy(), prediction_validity.numpy(), alpha=0.5)
+# plt.title('Prediction Validity vs Selected Transformed Outputs')
+# plt.xlabel('Selected Output Confidence Scores')
+# plt.ylabel('Prediction Validity (1 = Correct, 0 = Incorrect)')
+# plt.grid(True)
+#
+# plt.tight_layout()
+# plt.show()
 # Load the Gaussian Kernels
 kernel_normal = tr.load(os.path.join(CALIBRATION_LOCATION, 'gaussian_kernel_normal.pt'))
 kernel_transformed = tr.load(os.path.join(CALIBRATION_LOCATION, 'gaussian_kernel_transformed.pt'))
@@ -109,34 +109,42 @@ input_values = np.linspace(0, 1, 100)
 # Apply the Gaussian kernels to these input values
 output_values_normal = kernel_normal(tr.tensor(input_values, dtype=tr.float32)).detach().numpy()
 output_values_transformed = kernel_transformed(tr.tensor(input_values, dtype=tr.float32)).detach().numpy()
-
-# Plot the kernel functions
-plt.figure(figsize=(12, 6))
-
-plt.subplot(1, 2, 1)
-plt.plot(input_values, output_values_normal, label='Normal Kernel')
-plt.xlabel('Input Values')
-plt.ylabel('Output Values')
-plt.title('Normal Gaussian Kernel')
-plt.legend()
-
-plt.subplot(1, 2, 2)
-plt.plot(input_values, output_values_transformed, label='Transformed Kernel')
-plt.xlabel('Input Values')
-plt.ylabel('Output Values')
-plt.title('Transformed Gaussian Kernel')
-plt.legend()
-
-plt.suptitle('Gaussian Kernel Functions')
-plt.show()
+#
+# # Plot the kernel functions
+# plt.figure(figsize=(12, 6))
+#
+# plt.subplot(1, 2, 1)
+# plt.plot(input_values, output_values_normal, label='Normal Kernel')
+# plt.xlabel('Input Values')
+# plt.ylabel('Output Values')
+# plt.title('Normal Gaussian Kernel')
+# plt.legend()
+#
+# plt.subplot(1, 2, 2)
+# plt.plot(input_values, output_values_transformed, label='Transformed Kernel')
+# plt.xlabel('Input Values')
+# plt.ylabel('Output Values')
+# plt.title('Transformed Gaussian Kernel')
+# plt.legend()
+#
+# plt.suptitle('Gaussian Kernel Functions')
+# plt.show()
 
 # Apply the kernels to the test data
 test_scores_normal = kernel_normal(selected_softmax_normal_outputs).squeeze()
 test_scores_transformed = kernel_transformed(selected_mean_softmax_transformed_outputs).squeeze()
 
+normal_bins = Bin_edges(selected_softmax_normal_outputs,10,None)
+transformed_bins = Bin_edges(selected_mean_softmax_transformed_outputs,10,None)
 
-plot_reliability_diagram(test_scores_normal,prediction_validity)
-plot_reliability_diagram(test_scores_transformed,prediction_validity)
+reliability_diagram(normal_bins,selected_softmax_normal_outputs,prediction_validity)
+reliability_diagram(transformed_bins,selected_mean_softmax_transformed_outputs,prediction_validity)
+
+normal_bins = Bin_edges(test_scores_normal,10,None)
+transformed_bins = Bin_edges(test_scores_transformed,10,None)
+
+reliability_diagram(normal_bins,test_scores_normal,prediction_validity)
+reliability_diagram(transformed_bins,test_scores_transformed,prediction_validity)
 
 # Calculate performance metrics for normal kernel
 ece_normal = ECE()(test_scores_normal, prediction_validity)
@@ -158,3 +166,44 @@ print("\nTransformed Kernel Metrics:")
 print("ECE:", ece_transformed.item())
 print("MIE:", mie_transformed.item())
 print("AURC:", aurc_transformed.item())
+
+temp_scaled_model = TemperatureScaledConfidence()
+temp_scaled_model.load_state_dict(tr.load(os.path.join(CALIBRATION_LOCATION, 'temperature_scaled_model.pt')))
+temp_scaled_model.to(device)
+avg_temp_scaled_model = AveragetemperatureScaledConfidence()
+avg_temp_scaled_model.load_state_dict(tr.load(os.path.join(CALIBRATION_LOCATION, 'avg_temperature_scaled_model.pt')))
+avg_temp_scaled_model.to(device)
+
+# Apply temperature scaling to the outputs
+with tr.no_grad():
+    temp_scaled_normal_confidences = temp_scaled_model(normal_outputs)
+    temp_scaled_transformed_confidences = avg_temp_scaled_model(transformed_outputs)
+
+# Recompute the validity of each prediction for temperature-scaled outputs
+prediction_validity = (max_indices_normal == labels).int()
+
+normal_bins = Bin_edges(temp_scaled_normal_confidences,10,None)
+transformed_bins = Bin_edges(temp_scaled_transformed_confidences,10,None)
+
+reliability_diagram(normal_bins,temp_scaled_normal_confidences,prediction_validity)
+reliability_diagram(transformed_bins,temp_scaled_transformed_confidences,prediction_validity)
+
+# Recalculate performance metrics for temperature-scaled outputs
+ece_temp_scaled_normal = ECE()(temp_scaled_normal_confidences, prediction_validity)
+mie_temp_scaled_normal = MIE()(temp_scaled_normal_confidences, prediction_validity)
+_, _, aurc_temp_scaled_normal = AURC(temp_scaled_normal_confidences, prediction_validity)
+
+ece_temp_scaled_transformed = ECE()(temp_scaled_transformed_confidences, prediction_validity)
+mie_temp_scaled_transformed = MIE()(temp_scaled_transformed_confidences, prediction_validity)
+_, _, aurc_temp_scaled_transformed = AURC(temp_scaled_transformed_confidences, prediction_validity)
+
+# Print or store the results for temperature-scaled outputs
+print("Temperature Scaled Normal Metrics:")
+print("ECE:", ece_temp_scaled_normal.item())
+print("MIE:", mie_temp_scaled_normal.item())
+print("AURC:", aurc_temp_scaled_normal.item())
+
+print("\nTemperature Scaled Transformed Metrics:")
+print("ECE:", ece_temp_scaled_transformed.item())
+print("MIE:", mie_temp_scaled_transformed.item())
+print("AURC:", aurc_temp_scaled_transformed.item())

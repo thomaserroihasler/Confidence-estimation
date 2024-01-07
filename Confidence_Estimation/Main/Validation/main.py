@@ -93,8 +93,8 @@ optimizer_avg_temp = optim.Adam(avg_temp_scaled_model.parameters(), lr=0.001)
 
 # Train temperature scaling models
 
-# temp_scaled_model = train_model(temp_scaled_model, validation_loader_normal, loss_fn, optimizer_temp,None, number_of_epochs, None, None)
-# avg_temp_scaled_model = train_model(avg_temp_scaled_model, validation_loader_transformed, loss_fn, optimizer_avg_temp,None, number_of_epochs, None, None)
+temp_scaled_model = train_model(temp_scaled_model, validation_loader_normal, loss_fn, optimizer_temp,None, number_of_epochs, None, None)
+avg_temp_scaled_model = train_model(avg_temp_scaled_model, validation_loader_transformed, loss_fn, optimizer_avg_temp,None, number_of_epochs, None, None)
 
 # Initialize KNNGaussianKernel for normal and transformed outputs with prediction validity
 gaussian_kernel_normal = KNNGaussianKernel(naive_confidence, prediction_validity, Number_of_nearest_neighbors_normal)

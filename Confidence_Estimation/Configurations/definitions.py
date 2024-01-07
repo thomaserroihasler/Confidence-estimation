@@ -37,7 +37,7 @@ OPTIMIZERS = {
 
 ### DATA SET ###
 
-DATASET_NAME = 'MNIST' # Name of the dataset
+DATASET_NAME = 'CIFAR-10' # Name of the dataset
 NUMBER_OF_CLASSES = None #Number of classes to consider
 SPLIT_SIZES = { "train": 0.6, "validation": 0.2, "test": 0.2} # Split sizes (usually for non-standard datasets)
 BASIC_TRANSFORMATIONS = transforms.Compose([transforms.ToTensor()]+ Normalization(DATASET_NAME))
@@ -143,10 +143,10 @@ GENERATION_OUTPUT_PARALLEL_TRANSFORMATIONS = None
 GENERATION_OUTPUT_ADDITIONAL_TRANSFORMATIONS = None
 
 GENERATION_OUTPUT_ADDITIONAL_TRANSFORMATIONS = transforms.Compose([
-    transforms.RandomRotation(10),  # Randomly rotate the image by +/- 10 degrees
+    transforms.RandomRotation(25),  # Randomly rotate the image by +/- 10 degrees
 ])
 
-GENERATION_OUTPUT_NUMBER_OF_TRANSFORMATIONS = 3
+GENERATION_OUTPUT_NUMBER_OF_TRANSFORMATIONS = 10
 GENERATION_OUTPUT_BATCH_SIZE = 32
 OUTPUT_SAVE = 'all_model_data.pth'
 
@@ -167,8 +167,8 @@ TEST_ACCURACY_THRESHOLD = 95
 EARLY_STOPPING = False  # Flag to indicate whether early stopping was triggered
 
 
-VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_NORMAL = 20
-VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_TRANSFORMED = 20
+VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_NORMAL = 500
+VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_TRANSFORMED = 500
 VALIDATION_TEMPERATURE_SCALE = 1.0
 
 ### CONFIDENCE ESTIMATORS TEST ###
