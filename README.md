@@ -1,5 +1,3 @@
----
-
 # Confidence Estimation
 
 Confidence Estimation is a comprehensive project focused on assessing and improving the reliability of confidence scores produced by machine learning models, particularly in the context of classification tasks.
