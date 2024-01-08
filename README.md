@@ -48,33 +48,7 @@ Dependencies include:
 
 - Individual Python scripts can also be run separately if required.
 
-## Help
-
-For common issues:
-
-- Ensure all dependencies are correctly installed.
-- Check Python path configurations.
-- For detailed usage, run:
-  ```bash
-  python script_name.py --help
-  ```
-
 ## Authors
 
 Contributor: Thomas Hasler
 Contact: thomaserroihasler@gmail.com
-
-## License
-
-This project is licensed under the [NAME HERE] License - see the LICENSE.md file for details.
-
-## Acknowledgments
-
-Inspirations and references:
-- [AwesomeProject1](https://github.com/GitHubUserName/repo1)
-- [AwesomeProject2](https://github.com/GitHubUserName/repo2)
-- [etc](https://github.com/GitHubUserName/repo3)
-
----
-
-This README offers a comprehensive guide for users to understand, install, and execute the project. It provides clarity on dependencies, installation steps, and program execution, making it easier for users to engage with the project effectively.
