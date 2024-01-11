@@ -12,7 +12,7 @@ sys.path[0] = new_path
 from Confidence_Estimation.Other.Function_approximators.definitions import KNNGaussianKernel
 from Confidence_Estimation.Other.Confidences.definitions import TemperatureScaledConfidence, AveragetemperatureScaledConfidence
 from Confidence_Estimation.Main.Train.functions import train_model
-from Confidence_Estimation.Other.Measures.definitions import CrossEntropy
+from Confidence_Estimation.Other.Measures.definitions import*
 from Confidence_Estimation.Configurations.definitions import*
 from Confidence_Estimation.Configurations.functions import*
 from Confidence_Estimation.Other.Useful_functions.definitions import print_device_name, verify_and_create_folder
@@ -24,6 +24,7 @@ device = print_device_name()
 
 # Assigning all necessary variables
 batch_size = VALIDATION_BATCH_SIZE                                # Batch size for training data
+binning_strategy = VALIDATION_BINNING
 calibration_location = CALIBRATION_LOCATION                       # folder location for calibration methods
 classes_to_include = Classes_to_consider(NUMBER_OF_CLASSES)       # List of class indices to include in the dataset
 criterion = LOSS_FUNCTIONS[TRAINING_LOSS_FUNCTION]                # Loss function to be used during training
@@ -40,8 +41,10 @@ output_location = OUTPUT_LOCATION                                 # Location for
 output_file_path = OUTPUT_FILE_PATH                               # Save location for the output
 split_sizes = SPLIT_SIZES                                         # Split proportions for train, validation, test sets
 weight_decay = VALIDATION_WEIGHT_DECAY                              # Weight decay factor for the optimizer
-Number_of_nearest_neighbors_normal= VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_NORMAL
-Number_of_nearest_neighbors_transformed = VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_TRANSFORMED
+number_of_nearest_neighbors_normal= VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_NORMAL
+number_of_nearest_neighbors_transformed = VALIDATION_NUMBER_OF_NEAREST_NEIGHBORS_TRANSFORMED
+mie = MIE(**binning_strategy)
+ece = ECE(**binning_strategy)
 # Load the model data
 all_model_data = tr.load(output_file_path)
 
@@ -93,12 +96,12 @@ optimizer_avg_temp = optim.Adam(avg_temp_scaled_model.parameters(), lr=0.001)
 
 # Train temperature scaling models
 
-temp_scaled_model = train_model(temp_scaled_model, validation_loader_normal, loss_fn, optimizer_temp,None, number_of_epochs, None, None)
-avg_temp_scaled_model = train_model(avg_temp_scaled_model, validation_loader_transformed, loss_fn, optimizer_avg_temp,None, number_of_epochs, None, None)
+temp_scaled_model = train_model(temp_scaled_model, validation_loader_normal, loss_fn, optimizer_temp,device,None, number_of_epochs, None, None)
+avg_temp_scaled_model = train_model(avg_temp_scaled_model, validation_loader_transformed, loss_fn, optimizer_avg_temp,device,None, number_of_epochs, None, None)
 
 # Initialize KNNGaussianKernel for normal and transformed outputs with prediction validity
-gaussian_kernel_normal = KNNGaussianKernel(naive_confidence, prediction_validity, Number_of_nearest_neighbors_normal)
-gaussian_kernel_transformed = KNNGaussianKernel(transformed_mean_confidence, prediction_validity, Number_of_nearest_neighbors_transformed)
+gaussian_kernel_normal = KNNGaussianKernel(naive_confidence, prediction_validity, number_of_nearest_neighbors_normal)
+gaussian_kernel_transformed = KNNGaussianKernel(transformed_mean_confidence, prediction_validity, number_of_nearest_neighbors_transformed)
 
 # Save the trained temperature scaling models and Gaussian Kernels
 verify_and_create_folder(calibration_location)

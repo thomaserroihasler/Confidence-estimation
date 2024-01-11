@@ -18,6 +18,7 @@ from Confidence_Estimation.Main.Test.functions import test_model
 from Confidence_Estimation.Other.Measures.definitions import TrueFalseMeasure
 from Confidence_Estimation.Networks_and_predictors.Predictors.definitions import MaximalLogitPredictor
 from Confidence_Estimation.Data.Data_visualization.functions import plot_sample_images
+from Confidence_Estimation.Networks_and_predictors.Networks.functions import*
 
 # Get the device name for PyTorch operations
 device = print_device_name()
@@ -36,6 +37,7 @@ number_of_classes = NUMBER_OF_CLASSES                                     # Numb
 number_of_transformations = GENERATION_OUTPUT_NUMBER_OF_TRANSFORMATIONS   # Number of transformations for data generation output
 output_location = OUTPUT_LOCATION                                         # Location for saving the model output
 output_file_path = OUTPUT_FILE_PATH                                       # Save location for the output
+parallel_transformations = GENERATION_OUTPUT_PARALLEL_TRANSFORMATIONS
 split_sizes = SPLIT_SIZES                                                 # Split proportions for train, validation, test sets
 
 criterion = LOSS_FUNCTIONS[TRAINING_LOSS_FUNCTION]                # Loss function to be used during training
@@ -54,7 +56,11 @@ if number_of_classes == None:
 
 # Initialize the model with the specified configuration and move it to the appropriate device (GPU/CPU)
 model = model_config['model'](*model_config['args'](dataset_config, number_of_classes)).to(device)
-model.load_state_dict(tr.load(network_file_path))
+# Use the load_networks function to load the model state
+loaded_networks = load_networks(model, network_file_path)
+model = loaded_networks[0] if loaded_networks else model
+
+# model.load_state_dict(tr.load(network_file_path))
 
 # Creating DataLoaders for datasets
 validation_loader = DataLoader(CustomTransformDataset(validation_set, transform=additional_transformations, N=number_of_transformations), batch_size=batch_size, shuffle=False)
@@ -64,7 +70,7 @@ test_loader = DataLoader(CustomTransformDataset(test_set, transform=additional_t
 validation_loader_nt = DataLoader(validation_set, batch_size=batch_size, shuffle=False)
 test_loader_nt = DataLoader(test_set, batch_size=batch_size, shuffle=False)
 
-test_cross_entropy, accuracy = test_model(model, validation_loader_nt, criterion, max_logit_predictor, prediction_criterion, batch_size)
+test_cross_entropy, accuracy = test_model(model, validation_loader_nt, criterion, max_logit_predictor,device, prediction_criterion, batch_size)
 
 verify_and_create_folder(output_location)
 
@@ -92,10 +98,15 @@ for dataset_name, loader, loader_nt in [('validation', validation_loader, valida
             batch_size, N, C, H, W = inputs.size()
             inputs = inputs.view(-1, C, H, W)  # Merge batch and N dimensions
             # repeat the labels N times
-            # repeated_labels = labels.repeat_interleave(N)
-            # plot_sample_images(inputs,repeated_labels,'transformed')
+            repeated_labels = labels.repeat_interleave(N)
+            #plot_sample_images(inputs,repeated_labels,'transformed',10)
+
         inputs = inputs.to(device)
+        if parallel_transformations:
+            for t in parallel_transformations:
+                inputs = t(inputs)
         labels = labels.to(device)  # No need to repeat labels
+        #plot_sample_images(inputs, repeated_labels, 'transformed', 10)
 
         with tr.no_grad():
             outputs = model(inputs)
@@ -131,6 +142,3 @@ all_model_data[network_name] = model_data
 # Save the entire dictionary of model data
 print('Model outputs data saved location is ', output_file_path)
 tr.save(all_model_data, output_file_path)
-
-
-

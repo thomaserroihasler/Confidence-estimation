@@ -157,7 +157,6 @@ class MIE(nn.Module):
         self.bin_edges = Bin_edges(confidence, self.num_bins, self.num_per_bin)
         # Compute bin sizes, confidences, and accuracies
         bin_sizes, bin_confidences, bin_accuracies = self.calculate_bins(confidence, accuracy)
-        print(bin_sizes)
         bin_accuracies = handle_nan_torch(bin_accuracies)
         # Calculate ECE loss
         mie_loss = ((bin_sizes.float() / len(confidence)) * Single_bit_entropy_func(bin_accuracies)).sum()

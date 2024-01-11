@@ -48,7 +48,9 @@ class TemperatureScaledConfidence(Output_Confidence):
 
     def confidence_estimation(self, x):
         softmax = nn.Softmax(dim=-1)
+        print(x.device,self.Temperature.device)
         p_T = softmax(x / self.Temperature)
+
         c = tr.max(p_T,dim = 1).values
         return c
 

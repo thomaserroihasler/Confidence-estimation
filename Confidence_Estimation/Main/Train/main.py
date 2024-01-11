@@ -65,9 +65,9 @@ model = model_config['model'](*model_config['args'](dataset_config, number_of_cl
 # Train the model using the specified parameters and datasets
 optimizer = create_optimizer(optimizer,model.parameters(), learning_rate, momentum, weight_decay)  # Optimizer for training
 
-model = train_model(model,train_loader,criterion,optimizer,parallel_transformations,5,val_loader,None)
+model = train_model(model,train_loader,criterion,optimizer,device,parallel_transformations,number_of_epochs,val_loader,None)
 
-test_cross_entropy, accuracy = test_model(model, test_loader, criterion, max_logit_predictor, prediction_criterion, batch_size)
+test_cross_entropy, accuracy = test_model(model, test_loader, criterion, max_logit_predictor,device, prediction_criterion, batch_size)
 # generate the appropriate folder
 verify_and_create_folder(network_location)
 

@@ -53,28 +53,41 @@ def handle_nan_torch(tensor):
     tensor[tr.isnan(tensor)] = 0
     return tensor
 
+
 def Bin_edges(data, num_bins=None, num_per_bin=5):
     """ Bin data into a specified number of bins. """
-    data = data.to(dtype=tr.float64)  # Convert to higher precision
-    data = tr.sort(data).values  # Sort the data
+    # Store the original device of data
+    original_device = data.device
+
+    # Convert data to higher precision and ensure it's on its original device
+    data = data.to(dtype=tr.float64, device=original_device)
+
+    # Sort the data
+    data, _ = tr.sort(data)
 
     # Determine bin edges based on quantiles
     if num_bins is not None:
         # Fixed number of bins
-        quantiles = tr.linspace(0, 1, num_bins + 1).to(dtype=tr.float64)[1:-1]  # Exclude 0 and 1
-        bin_edges = tr.quantile(data, quantiles)
+        quantiles = tr.linspace(0, 1, num_bins + 1, device=original_device).to(dtype=tr.float64)[
+                    1:-1]  # Exclude 0 and 1
     else:
         # Determine the number of bins based on num_per_bin
         num_bins = max(mt.ceil(len(data) / num_per_bin), 1)
-        quantiles = tr.linspace(0, 1, num_bins + 1).to(dtype=tr.float64)[1:-1]  # Exclude 0 and 1
-        bin_edges = tr.quantile(data, quantiles)
+        quantiles = tr.linspace(0, 1, num_bins + 1, device=original_device).to(dtype=tr.float64)[
+                    1:-1]  # Exclude 0 and 1
 
-    # Finalize bin edges
-    unique_edges = tr.unique(bin_edges)  # Remove duplicates
-    sorted_edges = tr.sort(unique_edges).values  # Sort edges
-    sorted_edges = tr.cat((tr.tensor([data.min()]), sorted_edges, tr.tensor([data.max()])))  # Add min and max
+    # Compute bin edges
+    bin_edges = tr.quantile(data, quantiles)
+
+    # Remove duplicates and sort the bin edges
+    unique_edges = tr.unique(bin_edges)
+    sorted_edges = tr.sort(unique_edges).values
+
+    # Add the minimum and maximum values of the data to the edges
+    sorted_edges = tr.cat((tr.tensor([data.min()], device=original_device), sorted_edges,
+                           tr.tensor([data.max()], device=original_device)))
+
     return sorted_edges
-
 
 def Nearest_lower_and_upper_bound_in_sorted_list(X, x):
     """

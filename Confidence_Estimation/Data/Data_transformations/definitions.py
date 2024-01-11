@@ -118,9 +118,9 @@ class DynamicDiffeomorphism(Diffeomorphism):
     DynamicDiffeomorphism: Implements dynamic diffeomorphism transformations.
     """
 
-    def __init__(self, T, c,Noise = False, seed=None, interp='linear'):
+    def __init__(self, Temperature_scale, c,Noise = False, seed=None, interp='linear'):
         super(DynamicDiffeomorphism, self).__init__()
-        self.T = T
+        self.T = Temperature_scale
         self.c = c
         self.interp = interp
         self.seed = seed
@@ -155,7 +155,7 @@ class DynamicDiffeomorphism(Diffeomorphism):
         else:
             log = self.c.log()
         return n * (mt.pi * self.T * log) ** .5 / 2
-    
+
     def deform(self, x):
 
         device = x.device
@@ -167,28 +167,62 @@ class DynamicDiffeomorphism(Diffeomorphism):
 
         u = self.scalar_field(n, self.c, F_x, device)
         v = self.scalar_field(n, self.c, F_y, device)
-        dx = (self.T / self.typical_displacement(1, self.c, n)**2) ** 0.5 * u * n
+
+        dx = (self.T / self.typical_displacement(n)**2) ** 0.5 * u * n
         dy = (self.T / self.typical_displacement(n)**2) ** 0.5 * v * n
 
         # Now we need to apply the displacement to each image in the batch
-        deformed_images = tr.stack([self.remap(x[i], dx[i], dy[i], device) for i in range(batch_size)])
+
+        #deformed_images = tr.stack([self.remap(x[i], dx[i], dy[i], device) for i in range(batch_size)])
+        deformed_images = self.remap(x, dx, dy, device)
 
         if self.Noise:
             noise_levels = tr.norm(x - deformed_images, p=2, dim=(1, 2, 3), keepdim=True).squeeze()
             noises_on_sphere = generate_noises_on_sphere(noise_levels, 1, x[0].shape, device).reshape_as(x)
             deformed_images = x + noises_on_sphere
 
+
         return deformed_images
+    #
+    # def  remap(self, a, dx, dy, device):
+    #     # switch first and second dimension of a:
+    #
+    #     """
+    #     :param a: Tensor of shape [..., y, x]
+    #     :param dx: Tensor of shape [y, x]
+    #     :param dy: Tensor of shape [y, x]
+    #     :param interp: interpolation method
+    #     """
+    #     n, m = a.shape[-2:]
+    #     #assert dx.shape == (n, m) and dy.shape == (n, m), 'Image(s) and displacement fields shapes should match.'
+    #
+    #     y, x = tr.meshgrid(tr.arange(n, dtype=dx.dtype, device=device),
+    #                           tr.arange(m, dtype=dx.dtype, device=device))
+    #
+    #     xn = (x - dx).clamp(0, m - 1)
+    #     yn = (y - dy).clamp(0, n - 1)
+    #
+    #     xf = xn.floor().long()
+    #     yf = yn.floor().long()
+    #     xc = xn.ceil().long()
+    #     yc = yn.ceil().long()
+    #
+    #     xv = xn - xf
+    #     yv = yn - yf
+    #
+    #     return (1 - yv) * (1 - xv) * a[..., yf, xf] + (1 - yv) * xv * a[..., yf, xc] + yv * (1 - xv) * a[..., yc, xf] + yv * xv * a[..., yc, xc]
 
     def remap(self, a, dx, dy, device):
-        n, m = a.shape[-2:]
-        #print(dx.shape,(n, m))
-        assert dx.shape == (n, m) and dy.shape == (n, m), 'Image(s) and displacement fields shapes should match.'
+        a = tr.transpose(a,1,0)
+        b, n, m = a.shape[-3:]
+
+        assert dx.shape[-2:] == (n, m) and dy.shape[-2:] == (n, m), 'Image(s) and displacement fields shapes should match.'
         dtype = dx.dtype
 
         y, x = tr.meshgrid(tr.arange(n, dtype=dtype, device=device),
                            tr.arange(m, dtype=dtype, device=device),
                            indexing='ij')
+        B = tr.arange(b).view(b, 1, 1).expand(b, n, m)
         xn = (x - dx).clamp(0, m - 1)
         yn = (y - dy).clamp(0, n - 1)
 
@@ -197,9 +231,9 @@ class DynamicDiffeomorphism(Diffeomorphism):
             yf = yn.floor().long()
             xc = xn.ceil().long()
             yc = yn.ceil().long()
-
             xv = xn - xf
             yv = yn - yf
-            temp = (1 - yv) * (1 - xv) * a[..., yf, xf] + (1 - yv) * xv * a[..., yf, xc] + yv * (1 - xv) * a[..., yc, xf] + yv * xv * a[..., yc, xc]
+            temp = (1 - yv) * (1 - xv) * a[...,B, yf, xf] + (1 - yv) * xv * a[..., B,yf, xc] + yv * (1 - xv) * a[...,B, yc, xf] + yv * xv * a[..., B,yc, xc]
+            a =  tr.transpose(a,1,0)
+            temp = tr.transpose(temp,1,0)
             return temp
-

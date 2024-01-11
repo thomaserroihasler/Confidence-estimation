@@ -56,8 +56,11 @@ def plot_images_from_loader(loader, title, n=5):
     plot_sample_images(images, labels, title, n=n)
 
 # reliability diagram
+import torch as tr
+import matplotlib.pyplot as plt
 
-def reliability_diagram(bin_edges, confidences, accuracies,title = 'Reliability Diagram', save_path = './' ,legend=False):
+
+def reliability_diagram(bin_edges, confidences, accuracies, title='Reliability Diagram', save_path='./', legend=False):
     """
     Computes a reliability diagram (as a histogram) given the edges of the confidence bins,
     the confidences, and the accuracies.
@@ -72,30 +75,32 @@ def reliability_diagram(bin_edges, confidences, accuracies,title = 'Reliability 
     - hist (Tensor): A tensor of counts representing the reliability diagram.
     - bin_edges (Tensor): A tensor of bin edges for the reliability diagram.
     """
-
     with tr.no_grad():
-        # Compute the bin counts and accuracies
-        bin_counts = tr.zeros(len(bin_edges) - 1)
-        bin_accuracies = tr.zeros(len(bin_edges) - 1)
-        print(bin_counts)
+        bin_counts = tr.zeros(len(bin_edges) - 1, device=confidences.device)
+        bin_accuracies = tr.zeros(len(bin_edges) - 1, device=confidences.device)
+
         for i in range(len(bin_edges) - 1):
-            if (i == 0):
-                mask = ((confidences >= bin_edges[i]) & (confidences <= bin_edges[i + 1]))
-            else:
-                mask = ((confidences > bin_edges[i]) & (confidences <= bin_edges[i + 1]))
+            mask = ((confidences > bin_edges[i]) & (confidences <= bin_edges[i + 1])) if i > 0 else (
+                        (confidences >= bin_edges[i]) & (confidences <= bin_edges[i + 1]))
             if tr.sum(mask) > 0:
                 bin_counts[i] = tr.sum(mask)
                 bin_accuracies[i] = tr.sum(accuracies[mask]) / tr.sum(mask)
-        normalized_bin_counts = tr.log(bin_counts+1)/(tr.max(tr.log(bin_counts+1)).item())
-        #print('the bin counts and normalized bin counts are ', bin_counts, normalized_bin_counts)
-        # Compute the bar plot
-        print(bin_accuracies)
+
+        normalized_bin_counts = tr.log(bin_counts + 1) / tr.max(tr.log(bin_counts + 1))
+
+        # Move tensors to CPU for plotting
+        bin_edges_cpu = bin_edges.cpu()
+        bin_accuracies_cpu = bin_accuracies.cpu()
+        normalized_bin_counts_cpu = normalized_bin_counts.cpu()
+        diff_bin_edges_cpu = tr.diff(bin_edges).cpu()
+
         fig, ax = plt.subplots()
-        for i in range(len(bin_edges) - 1):
+        for i in range(len(bin_edges_cpu) - 1):
             if bin_counts[i] > 0:
-                height = bin_accuracies[i].item()
-                ax.bar(bin_edges[i], height, width=tr.diff(bin_edges)[i], alpha=normalized_bin_counts[i].item(), align='edge', color='blue')
-                ax.plot([bin_edges[i], bin_edges[i + 1]], [height, height], 'k-', linewidth=2,alpha=1)
+                height = bin_accuracies_cpu[i].item()
+                ax.bar(bin_edges_cpu[i], height, width=diff_bin_edges_cpu[i], alpha=normalized_bin_counts_cpu[i].item(),
+                       align='edge', color='blue')
+                ax.plot([bin_edges_cpu[i], bin_edges_cpu[i + 1]], [height, height], 'k-', linewidth=2, alpha=1)
 
         # Plot the perfect calibration line
         ax.plot([0, 1], [0, 1], 'k--', alpha=0.5)
@@ -110,10 +115,11 @@ def reliability_diagram(bin_edges, confidences, accuracies,title = 'Reliability 
 
         # Save the figure to file
         plt.show()
-        #fig.savefig(save_path)
-        #fig.clear()
+        plt.savefig(save_path)
         bin_confidences = (bin_edges[:-1] + bin_edges[1:]) / 2
-    return bin_counts,bin_accuracies, bin_confidences
+
+    return bin_counts.cpu(), bin_accuracies.cpu(), bin_confidences.cpu()
+
 
 def scatter_plot_tensors(tensor1, tensor2, save_path):
     assert tensor1.shape == tensor2.shape, "Both tensors must be of the same shape"
