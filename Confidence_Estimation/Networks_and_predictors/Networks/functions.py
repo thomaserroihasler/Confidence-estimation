@@ -116,7 +116,6 @@ def remove_module(state_dict, device):
             new_state_dict[key] = value.to(device)
     return new_state_dict
 
-
 def load_networks(network, file_location):
     """
     Load multiple networks from a file.

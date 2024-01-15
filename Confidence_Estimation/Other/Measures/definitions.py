@@ -71,18 +71,52 @@ class ECE(nn.Module):
         self.num_bins = num_bins
         self.num_per_bin = num_per_bin
 
-    def forward(self, confidence, accuracy):
+    # def forward(self, confidence, accuracy):
+    #
+    #     sorted_indices = tr.argsort(confidence)
+    #     confidence = confidence[sorted_indices]
+    #     accuracy = accuracy[sorted_indices]
+    #     self.bin_edges = Bin_edges(confidence, self.num_bins, self.num_per_bin)
+    #     # Compute bin sizes, confidences, and accuracies
+    #     bin_sizes, bin_confidences, bin_accuracies = self.calculate_bins(confidence, accuracy)
+    #     bin_accuracies = handle_nan_torch(bin_accuracies)
+    #     bin_confidences = handle_nan_torch(bin_confidences)
+    #     # Calculate ECE loss
+    #     ece_loss = ((bin_sizes.float() / len(confidence)) * tr.abs(bin_accuracies - bin_confidences)).sum()
+    #     return ece_loss
 
-        sorted_indices = tr.argsort(confidence)
-        confidence = confidence[sorted_indices]
+    def forward(self, confidence, accuracy):
+        accuracy = accuracy.float()
+        # Sort inputs by confidence
+        confidence, sorted_indices = tr.sort(confidence)
+        # print(confidence.shape)
+        # print(self.num_bins)
+        bin_edges = Bin_edges(confidence, self.num_bins, self.num_per_bin)
         accuracy = accuracy[sorted_indices]
-        self.bin_edges = Bin_edges(confidence, self.num_bins, self.num_per_bin)
+        # print(bin_edges)
+        N_bins = len(bin_edges) - 1
+        # print(N_bins)
         # Compute bin sizes, confidences, and accuracies
-        bin_sizes, bin_confidences, bin_accuracies = self.calculate_bins(confidence, accuracy)
-        bin_accuracies = handle_nan_torch(bin_accuracies)
-        bin_confidences = handle_nan_torch(bin_confidences)
+        bin_confidences = tr.zeros(N_bins)
+        bin_accuracies = tr.zeros(N_bins)
+        bin_sizes = tr.zeros(N_bins)
+
+        for i in range(N_bins):
+            if i == 0:
+                mask = ((confidence >= bin_edges[i]) & (confidence <= bin_edges[i + 1]))
+            else:
+                mask = ((confidence > bin_edges[i]) & (confidence <= bin_edges[i + 1]))
+
+            if mask.sum() > 0:
+                bin_confidences[i] = confidence[mask].mean()
+
+                bin_accuracies[i] = accuracy[mask].mean()
+                bin_sizes[i] = mask.sum()
+        # print('confidences and accuracies of bins',bin_confidences,bin_accuracies)
         # Calculate ECE loss
-        ece_loss = ((bin_sizes.float() / len(confidence)) * tr.abs(bin_accuracies - bin_confidences)).sum()
+        bin_sizes = bin_sizes.float()
+        ece_loss = (bin_sizes / len(confidence)).mul(tr.abs(bin_accuracies - bin_confidences)).sum()
+
         return ece_loss
 
     def calculate_bins(self, confidence, accuracy):
@@ -139,6 +173,40 @@ class ECEWithProbabilities(nn.Module):
         bin_confidences = tr.Tensor([confidences[(confidences > self.bin_edges[i]) & (confidences <= self.bin_edges[i+1])].mean().item() for i in range(len(self.bin_edges)-1)])
         bin_accuracies = tr.Tensor([accuracy[(confidences > self.bin_edges[i]) & (confidences <= self.bin_edges[i+1])].mean().item() for i in range(len(self.bin_edges)-1)])
         return bin_sizes, bin_confidences, bin_accuracies
+#
+#
+# class MIE (nn.Module):
+#     """
+#     MIE class: Edge defined Mutual Information estimator.
+#     """
+#      def __init__(self, num_bins=None, num_per_bin=50):
+#         super().__init__()
+#         self.acc_bin_edges = tr.tensor([0.0, 0.5, 1.0])
+#         self.bin_edges = Bin_edges(confidence, self.num_bins, self.num_per_bin)
+# 
+#     def forward(self, confidence, accuracy):
+#         # Compute histogram of accuracy
+#         h_acc, _ = tr.histogram(accuracy, bins=self.acc_bin_edges)
+# 
+#         # Compute joint histogram
+#         h_joint, _, _ = tr.histogram2d(confidence, accuracy, bins=[self.conf_bin_edges, self.acc_bin_edges])
+# 
+#         # Compute probabilities
+#         p_acc = h_acc / tr.sum(h_acc)
+#         p_joint = h_joint / tr.sum(h_joint)
+# 
+#         # Compute conditional probabilities
+#         p_acc_given_conf = p_joint / (tr.sum(p_joint, axis=1, keepdim=True)+1e-8)
+# 
+#         # Compute entropies
+#         print(p_acc)
+#         h_acc_est = -tr.sum(p_acc * tr.log(p_acc + 1e-8))
+#         h_acc_given_conf_est = -tr.sum(p_joint * tr.log(p_acc_given_conf + 1e-8))
+# 
+#         # Compute mutual information
+#         mi_est = h_acc_est - h_acc_given_conf_est
+# 
+#         return mi_est
 
 
 class MIE(nn.Module):
@@ -149,17 +217,20 @@ class MIE(nn.Module):
         super(MIE, self).__init__()
         self.num_bins = num_bins
         self.num_per_bin = num_per_bin
-
+        #         self.acc_bin_edges = tr.tensor([0.0, 0.5, 1.0])
+        #         self.conf_bin_edges = conf_bin_edges
+        #
     def forward(self, confidence, accuracy):
         sorted_indices = tr.argsort(confidence)
         confidence = confidence[sorted_indices]
         accuracy = accuracy[sorted_indices]
+        total_accuracy = accuracy.float().mean()
         self.bin_edges = Bin_edges(confidence, self.num_bins, self.num_per_bin)
         # Compute bin sizes, confidences, and accuracies
         bin_sizes, bin_confidences, bin_accuracies = self.calculate_bins(confidence, accuracy)
         bin_accuracies = handle_nan_torch(bin_accuracies)
         # Calculate ECE loss
-        mie_loss = ((bin_sizes.float() / len(confidence)) * Single_bit_entropy_func(bin_accuracies)).sum()
+        mie_loss = Single_bit_entropy_func(total_accuracy)-((bin_sizes.float() / len(confidence)) * Single_bit_entropy_func(bin_accuracies)).sum()
 
         return mie_loss
 

@@ -21,8 +21,7 @@ def load_weights_from_pt_file(file_path):
     print(weights_dicts)
     return weights_dicts
 # Example usage
-file_path = '../../Networks/'+'CIFAR-10'+'/Resnet18/'+'save.pt'
-file_path_2 = '../../Networks/'+'CIFAR-10'+'/Resnet18/'+'save.pth'
+file_path = '../../Networks/'+'CIFAR-10'+'/VGG/'+'save.pt'
+file_path_2 = '../../Networks/'+'CIFAR-10'+'/VGG/'+'save.pth'
 weights = load_weights_from_pt_file(file_path)
 tr.save(weights,file_path_2)
-#print(weights)

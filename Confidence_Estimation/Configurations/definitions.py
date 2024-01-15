@@ -37,10 +37,10 @@ OPTIMIZERS = {
 
 ### DATA SET ###
 
-DATASET_NAME = 'MNIST' # Name of the dataset
+DATASET_NAME = 'CIFAR-10' # Name of the dataset
 NUMBER_OF_CLASSES = None #Number of classes to consider
 SPLIT_SIZES = { "train": 5/6, "validation": 1/12, "test": 1/12} # Split sizes (usually for non-standard datasets)
-SPLIT_SIZES = { "train": 6/7, "validation": 1/14, "test": 1/14} # Split sizes (usually for non-standard datasets)
+#SPLIT_SIZES = { "train": 6/7, "validation": 1/14, "test": 1/14} # Split sizes (usually for non-standard datasets)
 
 #SPLIT_SIZES = None
 #SPLIT_SIZES = { "train": 0.6, "validation": 0.2, "test": 0.2} # Split sizes (usually for non-standard datasets)
@@ -81,7 +81,7 @@ CONFIG = { # Configurations for each dataset
 
 ### NETWORK ###
 
-NETWORK_NAME = 'SimpleCNN'
+NETWORK_NAME = 'VGG'
 NETWORK_SAVE = 'save.pth'
 MODELS = { # Model Configurations
     'VGG': {
@@ -102,6 +102,7 @@ MODELS = { # Model Configurations
 TRAINING_NUMBER_OF_EPOCHS = 0
 
 TRAINING_LOSS_FUNCTION = 'Cross-entropy'
+
 TRAINING_BATCH_SIZE = 32
 
 TRAINING_OPTIMIZER = 'SGD'
@@ -152,14 +153,14 @@ GENERATION_OUTPUT_ADDITIONAL_TRANSFORMATIONS = None
 # ])
 diffeo = DynamicDiffeomorphism(**GENERATION_OUTPUT_DIFFEOMORPHISM_PARAMS)
 GENERATION_OUTPUT_PARALLEL_TRANSFORMATIONS = [diffeo]
-GENERATION_OUTPUT_NUMBER_OF_TRANSFORMATIONS =  1
+GENERATION_OUTPUT_NUMBER_OF_TRANSFORMATIONS =  50
 GENERATION_OUTPUT_BATCH_SIZE = 32
 OUTPUT_SAVE = 'all_model_data.pth'
 
 ### CONFIDENCE ESTIMATOR VALIDATION
 
-VALIDATION_NUMBER_OF_TRANSFORMATIONS = 10
-VALIDATION_NUMBER_OF_EPOCHS = 25
+VALIDATION_NUMBER_OF_TRANSFORMATIONS = 1
+VALIDATION_NUMBER_OF_EPOCHS = 0
 
 VALIDATION_LOSS_FUNCTION = 'Cross-entropy'
 VALIDATION_NUMBER_OF_BINS = None

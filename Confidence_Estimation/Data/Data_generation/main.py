@@ -55,12 +55,15 @@ if number_of_classes == None:
     number_of_classes = len(dataset_config['classes'])
 
 # Initialize the model with the specified configuration and move it to the appropriate device (GPU/CPU)
+tr.manual_seed(1)
+
 model = model_config['model'](*model_config['args'](dataset_config, number_of_classes)).to(device)
 # Use the load_networks function to load the model state
+
 loaded_networks = load_networks(model, network_file_path)
 model = loaded_networks[0] if loaded_networks else model
 
-# model.load_state_dict(tr.load(network_file_path))
+#model.load_state_dict(tr.load(network_file_path))
 
 # Creating DataLoaders for datasets
 validation_loader = DataLoader(CustomTransformDataset(validation_set, transform=additional_transformations, N=number_of_transformations), batch_size=batch_size, shuffle=False)
@@ -121,12 +124,15 @@ for dataset_name, loader, loader_nt in [('validation', validation_loader, valida
 
     # Process dataset with only ToTensor transformation
     for inputs, labels in loader_nt:
-        inputs = inputs.to(device)
 
+        inputs = inputs.to(device)
+        #print('inputs',inputs.mean(),inputs.std())
         with tr.no_grad():
             outputs = model(inputs)
+            #print(model)
+            #print('outputs',outputs.mean(),outputs.std())
         all_outputs_original.append(outputs.cpu())
-
+        #print(inputs.mean(), inputs.std())
     # Concatenate all outputs for original dataset
     final_output_original = tr.cat(all_outputs_original, dim=0)
     # Store outputs and labels in the dictionary
@@ -138,6 +144,7 @@ for dataset_name, loader, loader_nt in [('validation', validation_loader, valida
 
 # Store the model's data in the main dictionary
 all_model_data[network_name] = model_data
+
 
 # Save the entire dictionary of model data
 print('Model outputs data saved location is ', output_file_path)

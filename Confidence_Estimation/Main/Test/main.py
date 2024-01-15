@@ -66,6 +66,7 @@ for k, v in test_data.items():
 # Transformed and normal outputs, labels
 transformed_outputs = test_data['transformed_outputs']
 normal_outputs = test_data['original_outputs']
+print(normal_outputs)
 labels = test_data['labels']
 
 # Softmax and processing of outputs
@@ -82,7 +83,8 @@ print((max_indices_normal == labels).float().mean())
 # Select relevant softmax outputs
 selected_mean_softmax_transformed_outputs = mean_softmax_transformed_outputs[tr.arange(mean_softmax_transformed_outputs.size(0)), max_indices_normal]
 selected_softmax_normal_outputs = softmax_normal_outputs[tr.arange(softmax_normal_outputs.size(0)), max_indices_normal]
-print(selected_mean_softmax_transformed_outputs[0],selected_softmax_normal_outputs[0])
+print(softmax_normal_outputs)
+
 # Load and move Gaussian Kernels to the device
 
 ece_normal = ece(selected_softmax_normal_outputs, prediction_validity)
@@ -93,6 +95,12 @@ ece_transformed = ece(selected_mean_softmax_transformed_outputs, prediction_vali
 mie_transformed = mie(selected_mean_softmax_transformed_outputs, prediction_validity)
 x2, y2, aurc_transformed = aurc(selected_mean_softmax_transformed_outputs, prediction_validity)
 
+normal_bins = Bin_edges(selected_softmax_normal_outputs, **binning_strategy)
+transformed_bins = Bin_edges(selected_mean_softmax_transformed_outputs, **binning_strategy)
+
+
+reliability_diagram(normal_bins, selected_softmax_normal_outputs, prediction_validity,'normal','normal.png')
+reliability_diagram(transformed_bins, selected_mean_softmax_transformed_outputs, prediction_validity,'transformed','transformed.png')
 
 kernel_normal = tr.load(os.path.join(CALIBRATION_LOCATION, 'gaussian_kernel_normal.pt'), map_location=device)
 kernel_transformed = tr.load(os.path.join(CALIBRATION_LOCATION, 'gaussian_kernel_transformed.pt'), map_location=device)

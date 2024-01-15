@@ -183,7 +183,34 @@ class DynamicDiffeomorphism(Diffeomorphism):
 
 
         return deformed_images
-    #
+
+    def remap(self, a, dx, dy, device):
+        a = tr.transpose(a,1,0)
+        b, n, m = a.shape[-3:]
+
+        assert dx.shape[-2:] == (n, m) and dy.shape[-2:] == (n, m), 'Image(s) and displacement fields shapes should match.'
+        dtype = dx.dtype
+
+        y, x = tr.meshgrid(tr.arange(n, dtype=dtype, device=device),
+                           tr.arange(m, dtype=dtype, device=device),
+                           indexing='ij')
+        B = tr.arange(b).view(b, 1, 1).expand(b, n, m)
+        xn = (x - dx).clamp(0, m - 1)
+        yn = (y - dy).clamp(0, n - 1)
+
+        if self.interp == 'linear':
+            xf = xn.floor().long()
+            yf = yn.floor().long()
+            xc = xn.ceil().long()
+            yc = yn.ceil().long()
+            xv = xn - xf
+            yv = yn - yf
+            temp = (1 - yv) * (1 - xv) * a[...,B, yf, xf] + (1 - yv) * xv * a[..., B,yf, xc] + yv * (1 - xv) * a[...,B, yc, xf] + yv * xv * a[..., B,yc, xc]
+            a =  tr.transpose(a,1,0)
+            temp = tr.transpose(temp,1,0)
+            return temp
+
+#
     # def  remap(self, a, dx, dy, device):
     #     # switch first and second dimension of a:
     #
@@ -211,29 +238,3 @@ class DynamicDiffeomorphism(Diffeomorphism):
     #     yv = yn - yf
     #
     #     return (1 - yv) * (1 - xv) * a[..., yf, xf] + (1 - yv) * xv * a[..., yf, xc] + yv * (1 - xv) * a[..., yc, xf] + yv * xv * a[..., yc, xc]
-
-    def remap(self, a, dx, dy, device):
-        a = tr.transpose(a,1,0)
-        b, n, m = a.shape[-3:]
-
-        assert dx.shape[-2:] == (n, m) and dy.shape[-2:] == (n, m), 'Image(s) and displacement fields shapes should match.'
-        dtype = dx.dtype
-
-        y, x = tr.meshgrid(tr.arange(n, dtype=dtype, device=device),
-                           tr.arange(m, dtype=dtype, device=device),
-                           indexing='ij')
-        B = tr.arange(b).view(b, 1, 1).expand(b, n, m)
-        xn = (x - dx).clamp(0, m - 1)
-        yn = (y - dy).clamp(0, n - 1)
-
-        if self.interp == 'linear':
-            xf = xn.floor().long()
-            yf = yn.floor().long()
-            xc = xn.ceil().long()
-            yc = yn.ceil().long()
-            xv = xn - xf
-            yv = yn - yf
-            temp = (1 - yv) * (1 - xv) * a[...,B, yf, xf] + (1 - yv) * xv * a[..., B,yf, xc] + yv * (1 - xv) * a[...,B, yc, xf] + yv * xv * a[..., B,yc, xc]
-            a =  tr.transpose(a,1,0)
-            temp = tr.transpose(temp,1,0)
-            return temp
