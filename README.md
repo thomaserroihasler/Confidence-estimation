@@ -2,9 +2,7 @@
 
 Confidence Estimation is a comprehensive project focused on assessing and improving the reliability of confidence scores produced by machine learning models, particularly in the context of classification tasks.
 
-## Description
-
-This project implements a series of Python scripts designed to train, validate, and test machine learning models, with an emphasis on evaluating their confidence estimation. It includes techniques like temperature scaling and Gaussian kernel application to improve and assess model calibration. The project is suited for researchers and practitioners interested in understanding and enhancing the reliability of their predictive models.
+Aimed at enhancing confidence estimation, using image transformations to extract local information on certainty.
 
 ## Getting Started
 
